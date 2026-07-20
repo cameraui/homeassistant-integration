@@ -24,7 +24,7 @@ Cameras with object detection get four binary sensors: person, vehicle, animal, 
 trigger:
   - platform: state
     entity_id: binary_sensor.front_door_person
-    to: "on"
+    to: 'on'
 action:
   - service: notify.mobile_app_phone
     data:
@@ -60,3 +60,7 @@ action:
     target:
       entity_id: cover.gate
 ```
+
+---
+
+_Part of the camera.ui ecosystem - A comprehensive camera management solution._
