@@ -1,0 +1,95 @@
+{
+  "config": {
+    "flow_title": "camera.ui ({host})",
+    "step": {
+      "user": {
+        "title": "Mit camera.ui verbinden",
+        "description": "Erstelle einen API-Token in camera.ui unter Einstellungen > Konto > API-Tokens.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "API-Token"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Mit camera.ui verbinden",
+        "description": "camera.ui wurde unter {host} gefunden. Erstelle einen API-Token in camera.ui unter Einstellungen > Konto > API-Tokens und trage ihn hier ein.",
+        "data": {
+          "token": "API-Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zum Server nicht möglich.",
+      "invalid_auth": "Der API-Token wurde abgelehnt."
+    },
+    "abort": {
+      "already_configured": "Dieser camera.ui Server ist bereits eingerichtet."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "motion": {
+        "name": "Bewegung"
+      },
+      "object_person": {
+        "name": "Person"
+      },
+      "object_vehicle": {
+        "name": "Fahrzeug"
+      },
+      "object_animal": {
+        "name": "Tier"
+      },
+      "object_package": {
+        "name": "Paket"
+      }
+    },
+    "sensor": {
+      "face": {
+        "name": "Gesicht"
+      },
+      "license_plate": {
+        "name": "Kennzeichen"
+      },
+      "classification": {
+        "name": "Klassifizierung"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "detection_started": "Erkennung gestartet",
+      "detection_ended": "Erkennung beendet",
+      "detection_recognized": "Erkennung (Gesicht/Kennzeichen)"
+    }
+  },
+  "services": {
+    "ptz": {
+      "name": "PTZ",
+      "description": "Schwenken, Neigen und Zoomen einer Kamera steuern.",
+      "fields": {
+        "action": {
+          "name": "Aktion",
+          "description": "continuous = weiter bewegen, stop = anhalten, move = relativer Schritt, absolute = auf Position fahren, preset = zu einem Preset, home = zur Home-Position."
+        },
+        "pan": {
+          "name": "Schwenk",
+          "description": "Horizontal. Geschwindigkeit bei continuous, Delta bei move, Position bei absolute (-1 bis 1, positiv = rechts)."
+        },
+        "tilt": {
+          "name": "Neigung",
+          "description": "Vertikal. Geschwindigkeit bei continuous, Delta bei move, Position bei absolute (-1 bis 1, positiv = hoch)."
+        },
+        "zoom": {
+          "name": "Zoom",
+          "description": "Zoom. Geschwindigkeit bei continuous, Delta bei move, Position bei absolute (-1 bis 1, positiv = rein)."
+        },
+        "preset": {
+          "name": "Preset",
+          "description": "Preset-Name, fuer die preset-Aktion."
+        }
+      }
+    }
+  }
+}

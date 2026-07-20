@@ -1,0 +1,33 @@
+{
+  "name": "@camera.ui/hass-integration",
+  "version": "0.0.0",
+  "private": true,
+  "description": "camera.ui home assistant integration",
+  "type": "module",
+  "scripts": {
+    "audit": "npm audit fix && npm --prefix card audit fix",
+    "build": "npm --prefix card run build",
+    "format:card": "npm --prefix card run format",
+    "format:python": "cd custom_components && ruff format && cd ..",
+    "format": "npm run format:card && npm run format:python",
+    "install-updates": "npm i --save && npm run install-updates --if-present --prefix card",
+    "lint:card": "npm --prefix card run lint && npm --prefix card run type-check",
+    "lint:python": "cd custom_components && ruff check --fix && uv run --quiet --python 3.14 --with-requirements ../requirements-dev.txt mypy --config-file ./mypy.ini cameraui && cd ..",
+    "lint": "npm run lint:card && npm run lint:python",
+    "release": "bash scripts/release.sh",
+    "update": "updates --update ./ && updates --file card --update ./"
+  },
+  "homepage": "https://github.com/cameraui/hass-integration#readme",
+  "bugs": {
+    "url": "https://github.com/cameraui/hass-integration/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cameraui/hass-integration.git"
+  },
+  "license": "MIT",
+  "author": "seydx",
+  "devDependencies": {
+    "updates": "^17.19.1"
+  }
+}

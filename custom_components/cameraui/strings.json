@@ -1,0 +1,95 @@
+{
+  "config": {
+    "flow_title": "camera.ui ({host})",
+    "step": {
+      "user": {
+        "title": "Connect to camera.ui",
+        "description": "Create an API token in camera.ui under Settings > Account > API tokens.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "API token"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Connect to camera.ui",
+        "description": "camera.ui was found at {host}. Create an API token in camera.ui under Settings > Account > API tokens and enter it here.",
+        "data": {
+          "token": "API token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the server.",
+      "invalid_auth": "The API token was rejected."
+    },
+    "abort": {
+      "already_configured": "This camera.ui server is already configured."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "motion": {
+        "name": "Motion"
+      },
+      "object_person": {
+        "name": "Person"
+      },
+      "object_vehicle": {
+        "name": "Vehicle"
+      },
+      "object_animal": {
+        "name": "Animal"
+      },
+      "object_package": {
+        "name": "Package"
+      }
+    },
+    "sensor": {
+      "face": {
+        "name": "Face"
+      },
+      "license_plate": {
+        "name": "License plate"
+      },
+      "classification": {
+        "name": "Classification"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "detection_started": "Detection started",
+      "detection_ended": "Detection ended",
+      "detection_recognized": "Object recognized"
+    }
+  },
+  "services": {
+    "ptz": {
+      "name": "PTZ",
+      "description": "Control a camera's pan, tilt and zoom.",
+      "fields": {
+        "action": {
+          "name": "Action",
+          "description": "continuous = keep moving, stop = halt, move = relative nudge, absolute = go to a position, preset = go to a named preset, home = go to home."
+        },
+        "pan": {
+          "name": "Pan",
+          "description": "Horizontal amount. Speed for continuous, delta for move, position for absolute (-1 to 1, positive = right)."
+        },
+        "tilt": {
+          "name": "Tilt",
+          "description": "Vertical amount. Speed for continuous, delta for move, position for absolute (-1 to 1, positive = up)."
+        },
+        "zoom": {
+          "name": "Zoom",
+          "description": "Zoom amount. Speed for continuous, delta for move, position for absolute (-1 to 1, positive = in)."
+        },
+        "preset": {
+          "name": "Preset",
+          "description": "Preset name, for the preset action."
+        }
+      }
+    }
+  }
+}
