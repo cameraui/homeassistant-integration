@@ -112,7 +112,7 @@ export function createHaWsTransport(host: HaTransportHost): WsTransport {
       disposed: false,
     };
     handles.add(handle);
-    void connect(handle);
+    connect(handle);
 
     return {
       get readyState() {

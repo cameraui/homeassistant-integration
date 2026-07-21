@@ -72,6 +72,9 @@
         <IconMute v-if="muted" class="h-[18px] w-[18px]" />
         <IconVolume v-else class="h-[18px] w-[18px]" />
       </button>
+      <button v-if="hasIntercom && showMute" :class="[iconBtn, micActive && 'bg-white/20']" :title="micActive ? 'Stop talking' : 'Talk'" @click="toggleMic">
+        <IconMic class="h-[18px] w-[18px]" />
+      </button>
       <button v-if="pipSupported && showPip" :disabled="!hasVideo" :class="iconBtn" @click="stream.togglePip()">
         <IconPipOn v-if="isPip" class="h-[18px] w-[18px]" />
         <IconPipOff v-else class="h-[18px] w-[18px]" />
@@ -100,6 +103,7 @@ import IconPlay from '~icons/basil/play-solid';
 import IconPipOn from '~icons/fluent/picture-in-picture-16-filled';
 import IconPipOff from '~icons/fluent/picture-in-picture-16-regular';
 import IconVideoOff from '~icons/fluent/video-off-32-filled';
+import IconMic from '~icons/heroicons/microphone-16-solid';
 import IconVolume from '~icons/heroicons/speaker-wave-16-solid';
 import IconMute from '~icons/heroicons/speaker-x-mark-16-solid';
 import IconPtz from '~icons/mdi/arrow-all';
@@ -133,7 +137,7 @@ const stream = useCameraStream({
   videoClass: 'cui-video',
   isolated: true,
 });
-const { status, isReconnecting, activeMode, activeResolution, muted, isPip, nativeWidth, error } = stream;
+const { status, isReconnecting, activeMode, activeResolution, muted, isPip, nativeWidth, error, hasIntercom } = stream;
 
 const RESOLUTION_LABELS: Record<string, string> = {
   'high-resolution': 'HD',
@@ -144,6 +148,8 @@ const iconBtn =
   'flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:bg-white/15 disabled:cursor-default disabled:opacity-40';
 const pillBtn = 'flex h-7 cursor-pointer items-center rounded-md bg-black/40 px-2 text-[11px] font-semibold text-white transition-colors hover:bg-black/60';
 const pipSupported = typeof document !== 'undefined' && document.pictureInPictureEnabled;
+
+let userMediaStream: MediaStream | undefined;
 
 const wrapperEl = useTemplateRef<HTMLElement>('wrapperEl');
 const containerEl = useTemplateRef<HTMLElement>('containerEl');
@@ -157,6 +163,7 @@ const requestedMode = ref(props.mode ?? 'auto');
 const snapshotSrc = ref(props.poster);
 const snapshotAt = ref(0);
 const snapshotLoading = ref(false);
+const micActive = ref(false);
 
 const ptzCaps = computed(() => props.attributes.ptz ?? []);
 const hasVideo = computed(() => nativeWidth.value > 0);
@@ -244,18 +251,42 @@ function cycleResolution(): void {
   if (roles.length < 2) return;
   const index = roles.indexOf(activeResolution.value);
   const next = roles[(index + 1) % roles.length] as StreamingRole;
-  void stream.setResolution(next);
+  stream.setResolution(next);
 }
 
 function cycleMode(): void {
   const order: VideoStreamingMode[] = ['auto', 'webrtc', 'mse'];
   const next = order[(order.indexOf(requestedMode.value) + 1) % order.length];
   requestedMode.value = next;
-  void stream.setMode(next);
+  stream.setMode(next);
 }
 
 function toggleMute(): void {
   stream.setMuted(!muted.value);
+}
+
+function stopMic(): void {
+  if (!micActive.value) return;
+  micActive.value = false;
+  userMediaStream?.getTracks().forEach((track) => track.stop());
+  userMediaStream = undefined;
+  stream.setMicrophone(null);
+}
+
+async function toggleMic(): Promise<void> {
+  if (micActive.value) {
+    stopMic();
+    return;
+  }
+  if (!hasIntercom.value) return;
+  try {
+    userMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    await stream.setMicrophone(userMediaStream.getAudioTracks()[0] ?? null);
+    micActive.value = true;
+  } catch {
+    userMediaStream?.getTracks().forEach((track) => track.stop());
+    userMediaStream = undefined;
+  }
 }
 
 function onFullscreenChange(): void {
@@ -274,12 +305,13 @@ watch(
   live,
   (on) => {
     if (on) {
-      void stream.start();
+      stream.start();
       snapshotLoop.pause();
     } else {
+      stopMic();
       stream.stop();
       snapshotAt.value = 0;
-      void refreshSnapshot();
+      refreshSnapshot();
       snapshotLoop.resume();
     }
   },
@@ -287,4 +319,5 @@ watch(
 );
 
 useEventListener(document, 'fullscreenchange', onFullscreenChange);
+onBeforeUnmount(stopMic);
 </script>
