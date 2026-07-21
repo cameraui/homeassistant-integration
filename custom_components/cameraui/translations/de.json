@@ -17,6 +17,22 @@
         "data": {
           "token": "API-Token"
         }
+      },
+      "reauth_confirm": {
+        "title": "camera.ui neu authentifizieren",
+        "description": "Der API-Token für {host} wurde abgelehnt. Erstelle einen neuen in camera.ui unter Einstellungen > Konto > API-Tokens und trage ihn hier ein.",
+        "data": {
+          "token": "API-Token"
+        }
+      },
+      "reconfigure": {
+        "title": "camera.ui neu konfigurieren",
+        "description": "Aktualisiere die Verbindungsdaten für diesen camera.ui Server.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "API-Token"
+        }
       }
     },
     "error": {
@@ -24,7 +40,10 @@
       "invalid_auth": "Der API-Token wurde abgelehnt."
     },
     "abort": {
-      "already_configured": "Dieser camera.ui Server ist bereits eingerichtet."
+      "already_configured": "Dieser camera.ui Server ist bereits eingerichtet.",
+      "reauth_successful": "Neuauthentifizierung erfolgreich.",
+      "reconfigure_successful": "Neukonfiguration erfolgreich.",
+      "wrong_account": "Der Token gehört zu einem anderen camera.ui Server."
     }
   },
   "entity": {

@@ -17,6 +17,17 @@ function entryIdFrom(hassRef: ShallowRef<HomeAssistant | undefined>, entities: s
   return undefined;
 }
 
+function isCameraUiCamera(hass: HomeAssistant | undefined, entityId: string): boolean {
+  if (entityId.split('.')[0] !== 'camera') return false;
+  const attrs = hass?.states[entityId]?.attributes as HaCameraAttributes | undefined;
+  return Boolean(attrs?.entry_id && Array.isArray(attrs.sources));
+}
+
+function firstCameraUiCamera(hass: HomeAssistant | undefined): string | undefined {
+  if (!hass) return undefined;
+  return Object.keys(hass.states).find((id) => isCameraUiCamera(hass, id));
+}
+
 function mountCardApp(
   el: HTMLElement,
   root: Component,
@@ -70,8 +81,29 @@ class CameraUiCardElement extends HTMLElement {
     return 5;
   }
 
-  public static getStubConfig(): Partial<CameraUiCardConfig> {
-    return { entity: '' };
+  public getGridOptions(): Record<string, number> {
+    return { rows: 4, columns: 12, min_rows: 3 };
+  }
+
+  public static getStubConfig(hass?: HomeAssistant): Partial<CameraUiCardConfig> {
+    return { entity: firstCameraUiCamera(hass) ?? '' };
+  }
+
+  public static getConfigForm(): { schema: unknown[] } {
+    return {
+      schema: [
+        { name: 'entity', required: true, selector: { entity: { domain: 'camera' } } },
+        { name: 'title', selector: { text: {} } },
+        {
+          type: 'grid',
+          name: '',
+          schema: [
+            { name: 'autostart', selector: { boolean: {} } },
+            { name: 'snapshot_interval', selector: { number: { mode: 'box', min: 0, unit_of_measurement: 's' } } },
+          ],
+        },
+      ],
+    };
   }
 
   public connectedCallback(): void {
@@ -119,8 +151,22 @@ class CameraUiGridCardElement extends HTMLElement {
     return 6;
   }
 
-  public static getStubConfig(): Partial<CameraUiGridConfig> {
-    return { cameras: [] };
+  public getGridOptions(): Record<string, number> {
+    return { rows: 6, columns: 12, min_rows: 3 };
+  }
+
+  public static getStubConfig(hass?: HomeAssistant): Partial<CameraUiGridConfig> {
+    const first = firstCameraUiCamera(hass);
+    return { cameras: first ? [first] : [] };
+  }
+
+  public static getConfigForm(): { schema: unknown[] } {
+    return {
+      schema: [
+        { name: 'cameras', required: true, selector: { entity: { domain: 'camera', multiple: true } } },
+        { name: 'columns', selector: { number: { mode: 'box', min: 1, max: 6 } } },
+      ],
+    };
   }
 
   public connectedCallback(): void {
@@ -164,6 +210,11 @@ window.customCards.push(
     name: 'camera.ui Card',
     description: 'Live view for camera.ui cameras with WebRTC/MSE, source switching and H.265 support.',
     documentationURL: 'https://github.com/cameraui/homeassistant-integration',
+    preview: true,
+    getEntitySuggestion: (hass: HomeAssistant, entityId: string) => {
+      if (!isCameraUiCamera(hass, entityId)) return null;
+      return { config: { type: 'custom:cameraui-card', entity: entityId } };
+    },
   },
   {
     type: 'cameraui-grid-card',

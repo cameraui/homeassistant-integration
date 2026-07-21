@@ -12,6 +12,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import CameraUiConfigEntry
 from .entity import CameraUiSensorEntity, async_setup_sensor_platform
 
+PARALLEL_UPDATES = 1
+
 STATE_MAP: dict[str, AlarmControlPanelState] = {
     "armed_home": AlarmControlPanelState.ARMED_HOME,
     "armed_away": AlarmControlPanelState.ARMED_AWAY,

@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import logging
 from datetime import timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import CameraUiApiError, CameraUiClient
+from .api import CameraUiApiError, CameraUiAuthError, CameraUiClient
 from .const import DOMAIN, EVENT_CAMERAUI, SIGNAL_CONNECTION, SIGNAL_DETECTION
+
+if TYPE_CHECKING:
+    from . import CameraUiConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,9 +22,9 @@ UPDATE_INTERVAL = timedelta(seconds=60)
 
 
 class CameraUiCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
-    config_entry: ConfigEntry
+    config_entry: CameraUiConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: CameraUiClient) -> None:
+    def __init__(self, hass: HomeAssistant, entry: CameraUiConfigEntry, client: CameraUiClient) -> None:
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=UPDATE_INTERVAL, config_entry=entry)
         self.client = client
         self._detections: dict[str, dict[str, Any]] = {}
@@ -31,6 +34,8 @@ class CameraUiCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
         try:
             cameras = await self.client.get_cameras()
+        except CameraUiAuthError as err:
+            raise ConfigEntryAuthFailed(str(err)) from err
         except CameraUiApiError as err:
             raise UpdateFailed(str(err)) from err
 

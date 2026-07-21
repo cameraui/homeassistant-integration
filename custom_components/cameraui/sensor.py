@@ -19,11 +19,13 @@ from .entity import (
     async_setup_sensor_platform,
 )
 
-# camera.ui detector type -> (entity key / translation_key, icon)
+PARALLEL_UPDATES = 0
+
+# camera.ui detector type -> entity key / translation_key
 DETECTION_VALUE_SENSORS = [
-    ("face", "face", "mdi:face-recognition"),
-    ("licensePlate", "license_plate", "mdi:card-text-outline"),
-    ("classifier", "classification", "mdi:tag-outline"),
+    ("face", "face"),
+    ("licensePlate", "license_plate"),
+    ("classifier", "classification"),
 ]
 
 
@@ -33,14 +35,14 @@ async def async_setup_entry(
     coordinator = entry.runtime_data.coordinator
     async_setup_sensor_platform(hass, entry, async_add_entities, Platform.SENSOR, CameraUiMeasurement)
 
-    def make_factory(kind: str, icon: str) -> Callable[[str], list[CameraUiDetectionValueSensor]]:
+    def make_factory(kind: str) -> Callable[[str], list[CameraUiDetectionValueSensor]]:
         def factory(camera_id: str) -> list[CameraUiDetectionValueSensor]:
-            return [CameraUiDetectionValueSensor(coordinator, camera_id, kind, icon)]
+            return [CameraUiDetectionValueSensor(coordinator, camera_id, kind)]
 
         return factory
 
-    for sensor_type, kind, icon in DETECTION_VALUE_SENSORS:
-        async_setup_detection_entities(hass, entry, async_add_entities, sensor_type, make_factory(kind, icon))
+    for sensor_type, kind in DETECTION_VALUE_SENSORS:
+        async_setup_detection_entities(hass, entry, async_add_entities, sensor_type, make_factory(kind))
 
 
 class CameraUiMeasurement(CameraUiSensorEntity, SensorEntity):
@@ -48,8 +50,13 @@ class CameraUiMeasurement(CameraUiSensorEntity, SensorEntity):
 
     @property
     def device_class(self) -> SensorDeviceClass | None:
-        device_class = self._semantics.get("deviceClass")
-        return SensorDeviceClass(device_class) if device_class else None
+        raw = self._semantics.get("deviceClass")
+        if not raw:
+            return None
+        try:
+            return SensorDeviceClass(raw)
+        except ValueError:
+            return None
 
     @property
     def native_unit_of_measurement(self) -> str | None:
@@ -66,12 +73,11 @@ class CameraUiMeasurement(CameraUiSensorEntity, SensorEntity):
 
 
 class CameraUiDetectionValueSensor(CameraUiEntity, SensorEntity):
-    def __init__(self, coordinator: CameraUiCoordinator, camera_id: str, kind: str, icon: str) -> None:
+    def __init__(self, coordinator: CameraUiCoordinator, camera_id: str, kind: str) -> None:
         super().__init__(coordinator, camera_id)
         self._kind = kind
         self._attr_unique_id = f"{camera_id}_{kind}"
         self._attr_translation_key = kind
-        self._attr_icon = icon
         self._detections: list[dict[str, Any]] = []
 
     async def async_added_to_hass(self) -> None:

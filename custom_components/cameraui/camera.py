@@ -11,6 +11,8 @@ from .api import CameraUiApiError
 from .coordinator import CameraUiCoordinator
 from .entity import CameraUiEntity
 
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: CameraUiConfigEntry, async_add_entities: AddEntitiesCallback

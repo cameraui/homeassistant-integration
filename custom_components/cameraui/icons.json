@@ -1,0 +1,15 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "object_person": { "default": "mdi:account" },
+      "object_vehicle": { "default": "mdi:car" },
+      "object_animal": { "default": "mdi:paw" },
+      "object_package": { "default": "mdi:package-variant-closed" }
+    },
+    "sensor": {
+      "face": { "default": "mdi:face-recognition" },
+      "license_plate": { "default": "mdi:card-text-outline" },
+      "classification": { "default": "mdi:tag-outline" }
+    }
+  }
+}

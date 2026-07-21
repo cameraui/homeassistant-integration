@@ -12,7 +12,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, SIGNAL_SENSOR_NEW, signal_sensor_remove, signal_sensor_update
+from .const import DOMAIN, SIGNAL_CONNECTION, SIGNAL_SENSOR_NEW, signal_sensor_remove, signal_sensor_update
 from .coordinator import CameraUiCoordinator
 from .sensor_manager import CameraUiSensorManager
 from .sensor_map import sensor_platform
@@ -27,6 +27,7 @@ class CameraUiEntity(CoordinatorEntity[CameraUiCoordinator]):
     def __init__(self, coordinator: CameraUiCoordinator, camera_id: str) -> None:
         super().__init__(coordinator)
         self._camera_id = camera_id
+        self._connected = True
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, camera_id)},
             name=self.camera_data.get("name", camera_id),
@@ -40,7 +41,16 @@ class CameraUiEntity(CoordinatorEntity[CameraUiCoordinator]):
 
     @property
     def available(self) -> bool:
-        return super().available and self._camera_id in self.coordinator.data
+        return super().available and self._connected and self._camera_id in self.coordinator.data
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_CONNECTION, self._handle_connection))
+
+    @callback
+    def _handle_connection(self, connected: bool) -> None:
+        self._connected = connected
+        self.async_write_ha_state()
 
 
 class CameraUiSensorEntity(Entity):
@@ -51,6 +61,7 @@ class CameraUiSensorEntity(Entity):
         self._manager = manager
         self._global_id = sensor["globalId"]
         self._camera_id = sensor["camera_id"]
+        self._connected = True
         # never stableId: it repeats across cameras, HA would drop the duplicate
         self._attr_unique_id = self._global_id
         self._attr_device_info = DeviceInfo(
@@ -80,7 +91,7 @@ class CameraUiSensorEntity(Entity):
 
     @property
     def available(self) -> bool:
-        return self._sensor is not None
+        return self._connected and self._sensor is not None
 
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(
@@ -89,9 +100,15 @@ class CameraUiSensorEntity(Entity):
         self.async_on_remove(
             async_dispatcher_connect(self.hass, signal_sensor_remove(self._global_id), self._handle_remove)
         )
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_CONNECTION, self._handle_connection))
 
     @callback
     def _handle_update(self) -> None:
+        self.async_write_ha_state()
+
+    @callback
+    def _handle_connection(self, connected: bool) -> None:
+        self._connected = connected
         self.async_write_ha_state()
 
     async def _handle_remove(self) -> None:

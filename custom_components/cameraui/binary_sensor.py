@@ -9,7 +9,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import CameraUiConfigEntry
-from .const import OBJECT_DETECTION_LABELS, OBJECT_LABEL_ICONS, SIGNAL_DETECTION
+from .const import OBJECT_DETECTION_LABELS, SIGNAL_DETECTION
 from .coordinator import CameraUiCoordinator
 from .entity import (
     CameraUiEntity,
@@ -17,6 +17,8 @@ from .entity import (
     async_setup_detection_entities,
     async_setup_sensor_platform,
 )
+
+PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
@@ -67,14 +69,13 @@ class CameraUiMotionSensor(CameraUiEntity, BinarySensorEntity):
 
 
 class CameraUiObjectSensor(CameraUiEntity, BinarySensorEntity):
-    _attr_device_class = BinarySensorDeviceClass.MOTION
+    _attr_device_class = BinarySensorDeviceClass.OCCUPANCY
 
     def __init__(self, coordinator: CameraUiCoordinator, camera_id: str, label: str) -> None:
         super().__init__(coordinator, camera_id)
         self._label = label
         self._attr_unique_id = f"{camera_id}_object_{label}"
         self._attr_translation_key = f"object_{label}"
-        self._attr_icon = OBJECT_LABEL_ICONS.get(label)
         self._attr_is_on = False
 
     async def async_added_to_hass(self) -> None:

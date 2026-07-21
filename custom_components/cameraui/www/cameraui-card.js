@@ -6157,7 +6157,15 @@ function Qu(e, t) {
 		if (t) return t;
 	}
 }
-function $u(e, t, n, r, i, a) {
+function $u(e, t) {
+	if (t.split(".")[0] !== "camera") return !1;
+	let n = e?.states[t]?.attributes;
+	return !!(n?.entry_id && Array.isArray(n.sources));
+}
+function ed(e) {
+	if (e) return Object.keys(e.states).find((t) => $u(e, t));
+}
+function td(e, t, n, r, i, a) {
 	let o = e.shadowRoot ?? e.attachShadow({ mode: "open" });
 	o.innerHTML = "";
 	let s = document.createElement("style");
@@ -6170,10 +6178,10 @@ function $u(e, t, n, r, i, a) {
 	}), u = No(t);
 	return u.provide(El, n), u.provide(r, i), u.use(wc(l)), u.mount(c), u;
 }
-function ed(e, t) {
+function nd(e, t) {
 	t.unmount(), e.shadowRoot && (e.shadowRoot.innerHTML = "");
 }
-var td = class extends HTMLElement {
+var rd = class extends HTMLElement {
 	app = null;
 	hassRef = /* @__PURE__ */ H(void 0);
 	configRef = /* @__PURE__ */ H(void 0);
@@ -6190,18 +6198,53 @@ var td = class extends HTMLElement {
 	getCardSize() {
 		return 5;
 	}
-	static getStubConfig() {
-		return { entity: "" };
+	getGridOptions() {
+		return {
+			rows: 4,
+			columns: 12,
+			min_rows: 3
+		};
+	}
+	static getStubConfig(e) {
+		return { entity: ed(e) ?? "" };
+	}
+	static getConfigForm() {
+		return { schema: [
+			{
+				name: "entity",
+				required: !0,
+				selector: { entity: { domain: "camera" } }
+			},
+			{
+				name: "title",
+				selector: { text: {} }
+			},
+			{
+				type: "grid",
+				name: "",
+				schema: [{
+					name: "autostart",
+					selector: { boolean: {} }
+				}, {
+					name: "snapshot_interval",
+					selector: { number: {
+						mode: "box",
+						min: 0,
+						unit_of_measurement: "s"
+					} }
+				}]
+			}
+		] };
 	}
 	connectedCallback() {
-		this.app ??= $u(this, Hu, this.hassRef, Dl, this.configRef, () => Qu(this.hassRef, this.configRef.value?.entity ? [this.configRef.value.entity] : []));
+		this.app ??= td(this, Hu, this.hassRef, Dl, this.configRef, () => Qu(this.hassRef, this.configRef.value?.entity ? [this.configRef.value.entity] : []));
 	}
 	disconnectedCallback() {
 		queueMicrotask(() => {
-			!this.isConnected && this.app && (ed(this, this.app), this.app = null);
+			!this.isConnected && this.app && (nd(this, this.app), this.app = null);
 		});
 	}
-}, nd = class extends HTMLElement {
+}, id = class extends HTMLElement {
 	app = null;
 	hassRef = /* @__PURE__ */ H(void 0);
 	configRef = /* @__PURE__ */ H(void 0);
@@ -6218,23 +6261,53 @@ var td = class extends HTMLElement {
 	getCardSize() {
 		return 6;
 	}
-	static getStubConfig() {
-		return { cameras: [] };
+	getGridOptions() {
+		return {
+			rows: 6,
+			columns: 12,
+			min_rows: 3
+		};
+	}
+	static getStubConfig(e) {
+		let t = ed(e);
+		return { cameras: t ? [t] : [] };
+	}
+	static getConfigForm() {
+		return { schema: [{
+			name: "cameras",
+			required: !0,
+			selector: { entity: {
+				domain: "camera",
+				multiple: !0
+			} }
+		}, {
+			name: "columns",
+			selector: { number: {
+				mode: "box",
+				min: 1,
+				max: 6
+			} }
+		}] };
 	}
 	connectedCallback() {
-		this.app ??= $u(this, Gu, this.hassRef, Ol, this.configRef, () => Qu(this.hassRef, this.configRef.value?.cameras ?? []));
+		this.app ??= td(this, Gu, this.hassRef, Ol, this.configRef, () => Qu(this.hassRef, this.configRef.value?.cameras ?? []));
 	}
 	disconnectedCallback() {
 		queueMicrotask(() => {
-			!this.isConnected && this.app && (ed(this, this.app), this.app = null);
+			!this.isConnected && this.app && (nd(this, this.app), this.app = null);
 		});
 	}
 };
-customElements.get("cameraui-card") || customElements.define("cameraui-card", td), customElements.get("cameraui-grid-card") || customElements.define("cameraui-grid-card", nd), window.customCards = window.customCards ?? [], window.customCards.push({
+customElements.get("cameraui-card") || customElements.define("cameraui-card", rd), customElements.get("cameraui-grid-card") || customElements.define("cameraui-grid-card", id), window.customCards = window.customCards ?? [], window.customCards.push({
 	type: "cameraui-card",
 	name: "camera.ui Card",
 	description: "Live view for camera.ui cameras with WebRTC/MSE, source switching and H.265 support.",
-	documentationURL: "https://github.com/cameraui/homeassistant-integration"
+	documentationURL: "https://github.com/cameraui/homeassistant-integration",
+	preview: !0,
+	getEntitySuggestion: (e, t) => $u(e, t) ? { config: {
+		type: "custom:cameraui-card",
+		entity: t
+	} } : null
 }, {
 	type: "cameraui-grid-card",
 	name: "camera.ui Grid",

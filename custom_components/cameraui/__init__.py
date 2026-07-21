@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .api import CameraUiApiError, CameraUiAuthError, CameraUiClient
+from .api import CameraUiApiError, CameraUiClient
 from .const import CONF_PROXY_SECRET, CONF_TOKEN, DOMAIN
 from .coordinator import CameraUiCoordinator
 from .panel import async_register_panel, async_register_panel_static, async_unregister_panel
@@ -52,12 +52,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: CameraUiConfigEntry) -> 
 
     coordinator = CameraUiCoordinator(hass, entry, client)
 
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except ConfigEntryAuthFailed:
-        raise
-    except CameraUiAuthError as err:
-        raise ConfigEntryAuthFailed(str(err)) from err
+    await coordinator.async_config_entry_first_refresh()
 
     try:
         await client.connect_events()

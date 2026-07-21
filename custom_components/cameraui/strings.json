@@ -17,6 +17,22 @@
         "data": {
           "token": "API token"
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate camera.ui",
+        "description": "The API token for {host} was rejected. Create a new one in camera.ui under Settings > Account > API tokens and enter it here.",
+        "data": {
+          "token": "API token"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure camera.ui",
+        "description": "Update the connection details for this camera.ui server.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "API token"
+        }
       }
     },
     "error": {
@@ -24,7 +40,10 @@
       "invalid_auth": "The API token was rejected."
     },
     "abort": {
-      "already_configured": "This camera.ui server is already configured."
+      "already_configured": "This camera.ui server is already configured.",
+      "reauth_successful": "Re-authentication was successful.",
+      "reconfigure_successful": "Reconfiguration was successful.",
+      "wrong_account": "The token belongs to a different camera.ui server."
     }
   },
   "entity": {

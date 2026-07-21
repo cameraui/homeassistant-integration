@@ -10,6 +10,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import CameraUiConfigEntry
 from .entity import CameraUiSensorEntity, async_setup_sensor_platform
 
+PARALLEL_UPDATES = 1
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: CameraUiConfigEntry, async_add_entities: AddEntitiesCallback
