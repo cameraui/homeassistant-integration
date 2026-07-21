@@ -6,7 +6,7 @@ Home Assistant integration for [camera.ui](https://github.com/cameraui/camera.ui
 
 Requires [HACS](https://hacs.xyz).
 
-[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cameraui&repository=hass-integration&category=integration)
+[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cameraui&repository=homeassistant-integration&category=integration)
 
 1. In HACS, add this repository as a custom repository (⋮ menu → Custom repositories), category **Integration**. Or use the button above.
 2. Install **camera.ui** and restart Home Assistant.

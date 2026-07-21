@@ -1,5 +1,5 @@
 {
-  "name": "@camera.ui/hass-integration",
+  "name": "@camera.ui/homeassistant-integration",
   "version": "0.0.0",
   "private": true,
   "description": "camera.ui home assistant integration",
@@ -17,13 +17,13 @@
     "release": "bash scripts/release.sh",
     "update": "updates --update ./ && updates --file card --update ./"
   },
-  "homepage": "https://github.com/cameraui/hass-integration#readme",
+  "homepage": "https://github.com/cameraui/homeassistant-integration#readme",
   "bugs": {
-    "url": "https://github.com/cameraui/hass-integration/issues"
+    "url": "https://github.com/cameraui/homeassistant-integration/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cameraui/hass-integration.git"
+    "url": "git+https://github.com/cameraui/homeassistant-integration.git"
   },
   "license": "MIT",
   "author": "seydx",

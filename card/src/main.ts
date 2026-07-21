@@ -163,12 +163,12 @@ window.customCards.push(
     type: 'cameraui-card',
     name: 'camera.ui Card',
     description: 'Live view for camera.ui cameras with WebRTC/MSE, source switching and H.265 support.',
-    documentationURL: 'https://github.com/cameraui/hass-integration',
+    documentationURL: 'https://github.com/cameraui/homeassistant-integration',
   },
   {
     type: 'cameraui-grid-card',
     name: 'camera.ui Grid',
     description: 'A grid of camera.ui live views, click any tile to go live.',
-    documentationURL: 'https://github.com/cameraui/hass-integration',
+    documentationURL: 'https://github.com/cameraui/homeassistant-integration',
   },
 );
