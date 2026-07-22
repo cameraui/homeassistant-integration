@@ -11,9 +11,9 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
-    "@camera.ui/browser": "~0.0.139",
-    "@camera.ui/sdk": "~0.0.28",
-    "@camera.ui/transport": "~0.0.20",
+    "@camera.ui/browser": "~0.0.141",
+    "@camera.ui/sdk": "~0.0.29",
+    "@camera.ui/transport": "~0.0.21",
     "@vueuse/core": "^14.3.0",
     "vue": "^3.5.40"
   },
@@ -30,7 +30,7 @@
     "eslint": "9.39.2",
     "eslint-plugin-vue": "^10.10.0",
     "jiti": "^2.7.0",
-    "prettier": "^3.9.5",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
     "typescript": "5.9.3",
     "unplugin-auto-import": "^21.0.0",
