@@ -3398,14 +3398,17 @@ function zs(e = {}) {
 	};
 }
 function Bs() {
-	let e = er(bc);
+	let e = er(xc);
 	if (!e) throw Error("[camera.ui] useCameraUi() called without CameraUiPlugin installed. Make sure to call app.use(createCameraUiPlugin({ ... })) before using this composable.");
 	return e;
 }
-function Vs(e, t) {
-	return `cui_${e.replace(/ /g, "_").toLowerCase()}_${t.replace(/ /g, "_").toLowerCase()}`;
+function Vs(e) {
+	return e.replace(/ /g, "_").toLowerCase();
 }
-var Hs = class {
+function Hs(e, t) {
+	return `cui_${Vs(e)}_${Vs(t)}`;
+}
+var Us = class {
 	static coreManagerNamespaces() {
 		return {
 			coreManagerSubject: "coreManager.subscriber",
@@ -3507,41 +3510,41 @@ var Hs = class {
 	static workerLogs() {
 		return "workers.logs";
 	}
-}, Us = 3, Ws = 3e4;
-async function Gs(e, t, n = {}) {
-	let r = n.maxRetries ?? Us, i = n.awaitConnect ?? !0, a = n.connectTimeoutMs ?? Ws, o = n.retryDelayMs ?? Ks, s = n.shouldRetry ?? qs, c = n.signal, l;
+}, Ws = 3, Gs = 3e4;
+async function Ks(e, t, n = {}) {
+	let r = n.maxRetries ?? Ws, i = n.awaitConnect ?? !0, a = n.connectTimeoutMs ?? Gs, o = n.retryDelayMs ?? qs, s = n.shouldRetry ?? Js, c = n.signal, l;
 	for (let n = 0; n <= r; n++) {
-		if (c?.aborted) throw Xs();
+		if (c?.aborted) throw Zs();
 		let u = e.value;
 		if (!u) {
 			if (!i) throw Error("rpc: not connected");
-			u = await Js(e, a, c);
+			u = await Ys(e, a, c);
 		}
 		try {
 			return await t(u);
 		} catch (e) {
 			if (l = e, n >= r || !s(e, n)) throw e;
-			await Ys(o(n), c);
+			await Xs(o(n), c);
 		}
 	}
 	throw l ?? /* @__PURE__ */ Error("rpc: max retries exceeded");
 }
-function Ks(e) {
+function qs(e) {
 	return Math.min(100 * 2 ** e, 1e3);
 }
-function qs(e) {
+function Js(e) {
 	if (!(e instanceof Error)) return !1;
 	let t = e.code;
 	if (t === "TIMEOUT" || t === "CONNECTION_CLOSED") return !0;
 	let n = e.message.toLowerCase();
 	return !!(n.includes("not connected") || n.includes("connection closed") || n.includes("no responders") || n.includes("connection refused") || n.includes("socket") || n.includes("timed out") || n.includes("timeout"));
 }
-async function Js(e, t, n) {
+async function Ys(e, t, n) {
 	return e.value ? e.value : new Promise((r, i) => {
 		let a = setTimeout(() => {
 			s(), n?.removeEventListener("abort", o), i(/* @__PURE__ */ Error("rpc: connect timeout"));
 		}, t), o = () => {
-			clearTimeout(a), s(), i(Xs());
+			clearTimeout(a), s(), i(Zs());
 		};
 		n?.addEventListener("abort", o, { once: !0 });
 		let s = G(e, (e) => {
@@ -3549,47 +3552,47 @@ async function Js(e, t, n) {
 		});
 	});
 }
-async function Ys(e, t) {
+async function Xs(e, t) {
 	return new Promise((n, r) => {
 		if (t?.aborted) {
-			r(Xs());
+			r(Zs());
 			return;
 		}
 		let i = setTimeout(() => {
 			t?.removeEventListener("abort", a), n();
 		}, e), a = () => {
-			clearTimeout(i), r(Xs());
+			clearTimeout(i), r(Zs());
 		};
 		t?.addEventListener("abort", a, { once: !0 });
 	});
 }
-function Xs() {
+function Zs() {
 	if (typeof DOMException < "u") return new DOMException("Aborted", "AbortError");
 	let e = /* @__PURE__ */ Error("Aborted");
 	return e.name = "AbortError", e;
 }
-var Zs = 5e3, Qs = /* @__PURE__ */ new Map(), $s = /* @__PURE__ */ new Map(), ec = /* @__PURE__ */ new Map(), tc = /* @__PURE__ */ new Map();
-function nc(e) {
-	tc.get(e)?.forEach((e) => e());
-}
+var Qs = 5e3, $s = /* @__PURE__ */ new Map(), ec = /* @__PURE__ */ new Map(), tc = /* @__PURE__ */ new Map(), nc = /* @__PURE__ */ new Map();
 function rc(e) {
-	setTimeout(() => URL.revokeObjectURL(e), Zs);
+	nc.get(e)?.forEach((e) => e());
 }
-function ic(e, t, n) {
-	let r = ec.get(e);
-	r && (rc(r), ec.delete(e)), Qs.set(e, t), n !== void 0 && $s.set(e, n), nc(e);
+function ic(e) {
+	setTimeout(() => URL.revokeObjectURL(e), Qs);
 }
-function ac(e) {
-	return Qs.get(e);
+function ac(e, t, n) {
+	let r = tc.get(e);
+	r && (ic(r), tc.delete(e)), $s.set(e, t), n !== void 0 && ec.set(e, n), rc(e);
 }
-function oc(e, t) {
-	return tc.has(e) || tc.set(e, /* @__PURE__ */ new Set()), tc.get(e).add(t), () => {
-		tc.get(e)?.delete(t);
+function oc(e) {
+	return $s.get(e);
+}
+function sc(e, t) {
+	return nc.has(e) || nc.set(e, /* @__PURE__ */ new Set()), nc.get(e).add(t), () => {
+		nc.get(e)?.delete(t);
 	};
 }
-async function sc(e, t) {
-	let n = Hs.cameraNamespaces(t._id), r = Hs.sensorControllerNamespaces(t._id), i = "rpc" in e && "value" in e.rpc ? e : void 0, a = i ? i.rpc : /* @__PURE__ */ H(e), o, s, c = /* @__PURE__ */ H(t), l = /* @__PURE__ */ V(!1), u = /* @__PURE__ */ V(!1), d = /* @__PURE__ */ H(ac(t._id)), f = /* @__PURE__ */ V(!1), p = /* @__PURE__ */ V({}), m = oc(t._id, () => {
-		d.value = ac(t._id);
+async function cc(e, t) {
+	let n = Us.cameraNamespaces(t._id), r = Us.sensorControllerNamespaces(t._id), i = "rpc" in e && "value" in e.rpc ? e : void 0, a = i ? i.rpc : /* @__PURE__ */ H(e), o, s, c = /* @__PURE__ */ H(t), l = /* @__PURE__ */ V(!1), u = /* @__PURE__ */ V(!1), d = /* @__PURE__ */ H(oc(t._id)), f = /* @__PURE__ */ V(!1), p = /* @__PURE__ */ V({}), m = sc(t._id, () => {
+		d.value = oc(t._id);
 	}), h = X(() => c.value.name), g = X(() => c.value.room), _ = X(() => c.value.nativeId), v = X(() => c.value.disabled), y = X(() => c.value.detectionSettings?.snooze ?? !1), b = X(() => c.value.isCloud), x = X(() => JSON.parse(JSON.stringify(c.value.sources)).map((e) => ({
 		...e,
 		snapshot: async (t) => N(e._id, t),
@@ -3603,24 +3606,24 @@ async function sc(e, t) {
 		f.value = !0;
 		try {
 			try {
-				let i = await Gs(a, (t) => t.createProxy(n.cameraControllerRpc).snapshotWithMeta(e, r));
-				return i && i.data.byteLength > 0 ? (ic(t._id, i.data, Date.now() - i.ageMs), i.data) : void 0;
+				let i = await Ks(a, (t) => t.createProxy(n.cameraControllerRpc).snapshotWithMeta(e, r));
+				return i && i.data.byteLength > 0 ? (ac(t._id, i.data, Date.now() - i.ageMs), i.data) : void 0;
 			} catch {
-				let i = await Gs(a, (t) => t.createProxy(n.cameraControllerRpc).snapshot(e, r));
-				if (i && i.byteLength > 0) return ic(t._id, i, r ? Date.now() : void 0), i;
+				let i = await Ks(a, (t) => t.createProxy(n.cameraControllerRpc).snapshot(e, r));
+				if (i && i.byteLength > 0) return ac(t._id, i, r ? Date.now() : void 0), i;
 			}
 		} finally {
 			f.value = !1;
 		}
 	}
 	async function ie(e, t, r = !1) {
-		return Gs(a, (i) => i.createProxy(n.cameraControllerRpc).probeStream(e, t, r));
+		return Ks(a, (i) => i.createProxy(n.cameraControllerRpc).probeStream(e, t, r));
 	}
 	async function ae(e) {
-		return Gs(a, (t) => t.createProxy(n.cameraControllerRpc).streamUrl(e));
+		return Ks(a, (t) => t.createProxy(n.cameraControllerRpc).streamUrl(e));
 	}
 	async function oe() {
-		let e = await Gs(a, (e) => e.createProxy(n.cameraControllerRpc).refreshStates());
+		let e = await Ks(a, (e) => e.createProxy(n.cameraControllerRpc).refreshStates());
 		c.value = e.camera, l.value = e.cameraState, u.value = e.frameWorkerState, p.value = e.sensorStates;
 	}
 	async function P(e) {
@@ -3638,7 +3641,7 @@ async function sc(e, t) {
 				u.value = e.data;
 				break;
 			case "snapshot:updated":
-				ic(t._id, e.data.snapshot, Date.now());
+				ac(t._id, e.data.snapshot, Date.now());
 				break;
 		}
 	}
@@ -3655,7 +3658,7 @@ async function sc(e, t) {
 		}
 	}
 	async function se() {
-		o?.(), s?.(), o = await Gs(a, (e) => e.subscribe(n.cameraSubject, P)), s = await Gs(a, (e) => e.subscribe(r.sensorSubject, F)), await oe();
+		o?.(), s?.(), o = await Ks(a, (e) => e.subscribe(n.cameraSubject, P)), s = await Ks(a, (e) => e.subscribe(r.sensorSubject, F)), await oe();
 	}
 	async function I() {
 		o?.(), o = void 0, s?.(), s = void 0, m();
@@ -3704,41 +3707,41 @@ async function sc(e, t) {
 		close: I
 	};
 }
-function cc() {
-	let e = Bs(), t = Hs.deviceManagerNamespaces();
+function lc() {
+	let e = Bs(), t = Us.deviceManagerNamespaces();
 	async function n(n) {
-		let r = await Gs(e.rpc, (e) => e.createProxy(t.deviceManagerRpc).getCamera(n, "@camera.ui/browser"));
-		if (r) return sc(e, r);
+		let r = await Ks(e.rpc, (e) => e.createProxy(t.deviceManagerRpc).getCamera(n, "@camera.ui/browser"));
+		if (r) return cc(e, r);
 	}
 	return { getCamera: n };
 }
-var lc = zs({
+var uc = zs({
 	releaseDelay: 1e3,
 	onRelease: (e, t) => t.close()
-}), uc = /* @__PURE__ */ new Map();
-function dc() {
-	lc.forEachValue((e) => {
+}), dc = /* @__PURE__ */ new Map();
+function fc() {
+	uc.forEachValue((e) => {
 		e.reconnect().catch(() => {});
 	});
 }
-function fc(e) {
-	let { isConnected: t } = Bs(), n = cc(), r = /* @__PURE__ */ H(), i = /* @__PURE__ */ V(!1), a = /* @__PURE__ */ V(!1), o = /* @__PURE__ */ V(), s;
+function pc(e) {
+	let { isConnected: t } = Bs(), n = lc(), r = /* @__PURE__ */ H(), i = /* @__PURE__ */ V(!1), a = /* @__PURE__ */ V(!1), o = /* @__PURE__ */ V(), s;
 	async function c(c) {
 		if (!t.value || !c) return;
-		if (s && s !== c && (lc.release(s), r.value = void 0, s = void 0), lc.has(c)) {
-			let e = lc.acquire(c, () => {
+		if (s && s !== c && (uc.release(s), r.value = void 0, s = void 0), uc.has(c)) {
+			let e = uc.acquire(c, () => {
 				throw Error("Should not create - already cached");
 			});
 			s = c, r.value = e, a.value = !0;
 			return;
 		}
-		let l = uc.get(c);
+		let l = dc.get(c);
 		if (l) {
 			i.value = !0;
 			try {
 				let t = await l;
-				if (t && lc.has(c) && W(e) === c) {
-					let e = lc.acquire(c, () => t);
+				if (t && uc.has(c) && W(e) === c) {
+					let e = uc.acquire(c, () => t);
 					s = c, r.value = e;
 				}
 			} catch (e) {
@@ -3750,12 +3753,12 @@ function fc(e) {
 		}
 		i.value = !0, o.value = void 0;
 		let u = n.getCamera(c);
-		uc.set(c, u);
+		dc.set(c, u);
 		try {
 			let t = await u;
 			if (t) {
-				if (lc.acquire(c, () => t), W(e) !== c) {
-					lc.release(c);
+				if (uc.acquire(c, () => t), W(e) !== c) {
+					uc.release(c);
 					return;
 				}
 				s = c, r.value = t;
@@ -3763,17 +3766,17 @@ function fc(e) {
 		} catch (e) {
 			o.value = e instanceof Error ? e : Error(String(e));
 		} finally {
-			uc.delete(c), i.value = !1, a.value = !0;
+			dc.delete(c), i.value = !1, a.value = !0;
 		}
 	}
 	async function l() {
 		let t = W(e);
-		t && (s &&= (lc.getRefCount(s) <= 1 ? lc.forceRelease(s) : lc.release(s), r.value = void 0, void 0), await c(t));
+		t && (s &&= (uc.getRefCount(s) <= 1 ? uc.forceRelease(s) : uc.release(s), r.value = void 0, void 0), await c(t));
 	}
 	return G([t, () => W(e)], async ([e, t]) => {
-		e && t ? await c(t) : !e && s && (lc.release(s), r.value = void 0, s = void 0);
+		e && t ? await c(t) : !e && s && (uc.release(s), r.value = void 0, s = void 0);
 	}, { immediate: !0 }), Io(() => {
-		s &&= (lc.release(s), r.value = void 0, void 0);
+		s &&= (uc.release(s), r.value = void 0, void 0);
 	}), {
 		camera: r,
 		isLoading: X(() => i.value || !a.value),
@@ -3781,32 +3784,32 @@ function fc(e) {
 		refresh: l
 	};
 }
-var pc = zs({ releaseDelay: 1e3 }), mc = /* @__PURE__ */ new Map(), hc = /* @__PURE__ */ new Set();
-function gc() {
-	pc.clear(), mc.clear();
-	for (let e of hc) try {
+var mc = zs({ releaseDelay: 1e3 }), hc = /* @__PURE__ */ new Map(), gc = /* @__PURE__ */ new Set();
+function _c() {
+	mc.clear(), hc.clear();
+	for (let e of gc) try {
 		e();
 	} catch {}
 }
 Z.Light, Z.Siren, Z.Battery, Z.Doorbell, Z.Contact, Z.Motion, Z.Object, Z.Audio, Z.Face, Z.LicensePlate, Z.Classifier, Z.PTZ, Z.Switch, Z.Lock, Z.SecuritySystem, Z.Temperature, Z.Humidity, Z.Occupancy, Z.Smoke, Z.Leak, Z.Garage;
-var _c = zs({
+var vc = zs({
 	releaseDelay: 1e3,
 	onRelease: (e, t) => t.manager.close()
 });
-function vc() {
-	_c.forEachValue((e) => {
+function yc() {
+	vc.forEachValue((e) => {
 		e.initPromise = e.manager.reconnect();
 	});
 }
 zs({ releaseDelay: 1e3 });
-function yc() {
-	gc(), dc(), vc();
+function bc() {
+	_c(), fc(), yc();
 }
-var bc = Symbol("camera-ui"), xc = new T("plugin");
-function Sc(e) {
+var xc = Symbol("camera-ui"), Sc = new T("plugin");
+function Cc(e) {
 	return "rpc" in e && "isConnected" in e;
 }
-function Cc(e) {
+function wc(e) {
 	let { natsTransport: t, target: n, wsTransport: r } = e, i = t.getClient() !== null, a = /* @__PURE__ */ H(t.getClient() ?? void 0), o = /* @__PURE__ */ V(t.getClient()?.isConnected ?? !1), s = /* @__PURE__ */ V(void 0), c = X(() => n.value?.endpoint.url), l = X(() => n.value?.tokens.access), u = X(() => {
 		let e = n.value;
 		if (e?.tokens.proxySession) return { session: e.tokens.proxySession };
@@ -3823,12 +3826,12 @@ function Cc(e) {
 		if (t) for (let e of t) try {
 			e();
 		} catch (e) {
-			xc.warn("context listener threw:", e);
+			Sc.warn("context listener threw:", e);
 		}
 	}
 	return t.subscribeClient((e) => {
 		let t = o.value;
-		e ? (a.value = e, o.value = !0, s.value = void 0, t || (yc(), i && m("reconnected"), i = !0)) : (a.value = void 0, o.value = !1, t && m("disconnected"));
+		e ? (a.value = e, o.value = !0, s.value = void 0, t || (bc(), i && m("reconnected"), i = !0)) : (a.value = void 0, o.value = !1, t && m("disconnected"));
 	}), t.on("auth-error", (e) => {
 		s.value = Error(e.message ?? "auth-error");
 	}), t.on("down", (e) => {
@@ -3848,19 +3851,19 @@ function Cc(e) {
 		off: p
 	});
 }
-function wc(e) {
+function Tc(e) {
 	return { install(t) {
-		let n = Sc(e) ? e : Cc(e);
-		t.provide(bc, n);
+		let n = Cc(e) ? e : wc(e);
+		t.provide(xc, n);
 	} };
 }
-var Tc = {
+var Ec = {
 	standbyTimeout: 5e3,
 	activityTimeout: 5e3
 };
-function Ec(e) {
+function Dc(e) {
 	let { initialMode: t = "always-on", config: n = {}, onStreamStart: r, onStreamStop: i, isStreamPlaying: a } = e, o = {
-		...Tc,
+		...Ec,
 		...n
 	}, s = /* @__PURE__ */ V(t), c = /* @__PURE__ */ V(!1), l = /* @__PURE__ */ V(!1), u, d;
 	function f() {
@@ -3935,78 +3938,78 @@ function Ec(e) {
 		dispose: C
 	};
 }
-var Dc = 3e4, Oc = new T("TabVisibility"), kc = /* @__PURE__ */ V(typeof document > "u" || document.visibilityState === "visible"), Ac = null, jc = /* @__PURE__ */ new Set(), Mc = /* @__PURE__ */ new Set(), Nc = /* @__PURE__ */ new Set(), Pc = !1;
-function Fc(e) {
-	Oc.debug(`paused listener fired (delay ${e.delayMs}ms reached)`);
+var Oc = 3e4, kc = new T("TabVisibility"), Ac = /* @__PURE__ */ V(typeof document > "u" || document.visibilityState === "visible"), jc = null, Mc = /* @__PURE__ */ new Set(), Nc = /* @__PURE__ */ new Set(), Pc = /* @__PURE__ */ new Set(), Fc = !1;
+function Ic(e) {
+	kc.debug(`paused listener fired (delay ${e.delayMs}ms reached)`);
 	try {
 		e.cb();
 	} catch (e) {
-		Oc.error("onTabPaused listener threw:", e);
+		kc.error("onTabPaused listener threw:", e);
 	}
 }
-function Ic(e) {
-	Oc.debug(`paused listener scheduled in ${e.delayMs}ms`), e.timer = setTimeout(() => {
-		if (e.timer = null, kc.value) {
-			Oc.debug("paused listener skipped — tab visible before delay");
+function Lc(e) {
+	kc.debug(`paused listener scheduled in ${e.delayMs}ms`), e.timer = setTimeout(() => {
+		if (e.timer = null, Ac.value) {
+			kc.debug("paused listener skipped — tab visible before delay");
 			return;
 		}
-		Fc(e);
+		Ic(e);
 	}, e.delayMs);
 }
-function Lc() {
-	for (let e of Mc) e.timer !== null && (clearTimeout(e.timer), e.timer = null);
-}
 function Rc() {
-	Pc || typeof document > "u" || (Pc = !0, document.addEventListener("visibilitychange", () => {
+	for (let e of Nc) e.timer !== null && (clearTimeout(e.timer), e.timer = null);
+}
+function zc() {
+	Fc || typeof document > "u" || (Fc = !0, document.addEventListener("visibilitychange", () => {
 		let e = document.visibilityState === "visible";
-		if (!e && kc.value) {
-			kc.value = !1, Ac = Date.now(), Oc.debug(`tab → hidden (hidden=${jc.size} paused=${Mc.size})`);
-			for (let e of jc) try {
+		if (!e && Ac.value) {
+			Ac.value = !1, jc = Date.now(), kc.debug(`tab → hidden (hidden=${Mc.size} paused=${Nc.size})`);
+			for (let e of Mc) try {
 				e.cb();
 			} catch (e) {
-				Oc.error("onTabHidden listener threw:", e);
+				kc.error("onTabHidden listener threw:", e);
 			}
-			for (let e of Mc) Ic(e);
-		} else if (e && !kc.value) {
-			Lc();
-			let e = Ac == null ? 0 : Date.now() - Ac;
-			Ac = null, kc.value = !0, Oc.debug(`tab → visible (hiddenMs=${e}, visible-listeners=${Nc.size})`);
-			for (let { cb: t } of Nc) try {
+			for (let e of Nc) Lc(e);
+		} else if (e && !Ac.value) {
+			Rc();
+			let e = jc == null ? 0 : Date.now() - jc;
+			jc = null, Ac.value = !0, kc.debug(`tab → visible (hiddenMs=${e}, visible-listeners=${Pc.size})`);
+			for (let { cb: t } of Pc) try {
 				t({ hiddenMs: e });
 			} catch (e) {
-				Oc.error("onTabVisible listener threw:", e);
+				kc.error("onTabVisible listener threw:", e);
 			}
 		}
 	}));
 }
-function zc() {
-	Rc();
-	let e = X(() => kc.value);
+function Bc() {
+	zc();
+	let e = X(() => Ac.value);
 	function t(e) {
 		let t = { cb: e };
-		jc.add(t);
+		Mc.add(t);
 		let n = () => {
-			jc.delete(t);
+			Mc.delete(t);
 		};
 		return Io(n), n;
 	}
 	function n(e, t = {}) {
 		let n = {
 			cb: e,
-			delayMs: t.delayMs ?? Dc,
+			delayMs: t.delayMs ?? Oc,
 			timer: null
 		};
-		Mc.add(n);
+		Nc.add(n);
 		let r = () => {
-			n.timer !== null && (clearTimeout(n.timer), n.timer = null), Mc.delete(n);
+			n.timer !== null && (clearTimeout(n.timer), n.timer = null), Nc.delete(n);
 		};
 		return Io(r), r;
 	}
 	function r(e) {
 		let t = { cb: e };
-		Nc.add(t);
+		Pc.add(t);
 		let n = () => {
-			Nc.delete(t);
+			Pc.delete(t);
 		};
 		return Io(n), n;
 	}
@@ -4017,7 +4020,7 @@ function zc() {
 		onTabVisible: r
 	};
 }
-var Bc = {
+var Vc = {
 	WEBRTC: {
 		RECONNECT_DELAY: 1e3,
 		CONNECT_TIMEOUT: 1e4,
@@ -4052,11 +4055,11 @@ var Bc = {
 		]
 	}
 };
-function Vc() {
+function Hc() {
 	return navigator.userAgent.match(/version\/(\d+)/i);
 }
-function Hc() {
-	let e = [...Bc.CODECS.DEFAULT], t = Vc();
+function Uc() {
+	let e = [...Vc.CODECS.DEFAULT], t = Hc();
 	if (t?.[1]) {
 		let n = parseInt(t[1], 10);
 		if (n < 13) {
@@ -4072,16 +4075,16 @@ function Hc() {
 	}
 	return e;
 }
-function Uc(e, t) {
+function Wc(e, t) {
 	return e.filter((e) => t(`video/mp4; codecs="${e}"`)).join(",");
 }
-function Wc(e) {
-	return Bc.CODECS.WEBRTC_AUDIO.includes(e);
-}
 function Gc(e) {
-	return Bc.CODECS.WEBRTC_VIDEO.includes(e) ? !0 : e === "H265" && Kc();
+	return Vc.CODECS.WEBRTC_AUDIO.includes(e);
 }
-function Kc() {
+function Kc(e) {
+	return Vc.CODECS.WEBRTC_VIDEO.includes(e) ? !0 : e === "H265" && qc();
+}
+function qc() {
 	try {
 		let e = RTCRtpSender?.getCapabilities("video")?.codecs;
 		return e ? e.some((e) => e.mimeType.toLowerCase().includes("h265") || e.mimeType.toLowerCase().includes("hevc")) : !1;
@@ -4089,8 +4092,8 @@ function Kc() {
 		return !1;
 	}
 }
-function qc(e) {
-	let t = e.audio.filter((e) => e.direction === "sendonly"), n = e.video.filter((e) => e.direction === "sendonly"), r = t.length === 0 || t.some((e) => Wc(e.codec)), i = n.length === 0 || n.some((e) => Gc(e.codec)), a = [];
+function Jc(e) {
+	let t = e.audio.filter((e) => e.direction === "sendonly"), n = e.video.filter((e) => e.direction === "sendonly"), r = t.length === 0 || t.some((e) => Gc(e.codec)), i = n.length === 0 || n.some((e) => Kc(e.codec)), a = [];
 	return r || a.push(...t.map((e) => e.codec)), i || a.push(...n.map((e) => e.codec)), {
 		compatible: r && i,
 		audioCompatible: r,
@@ -4098,14 +4101,14 @@ function qc(e) {
 		incompatibleCodecs: a
 	};
 }
-function Jc() {
+function Yc() {
 	return "ManagedMediaSource" in window;
 }
-function Yc() {
-	if (Jc()) return window.ManagedMediaSource;
+function Xc() {
+	if (Yc()) return window.ManagedMediaSource;
 	if ("MediaSource" in window) return window.MediaSource;
 }
-function Xc(e, t) {
+function Zc(e, t) {
 	return new Promise((n, r) => {
 		if (t.aborted) {
 			r(new DOMException("Aborted", "AbortError"));
@@ -4117,20 +4120,20 @@ function Xc(e, t) {
 		}, { once: !0 });
 	});
 }
-function Zc(e) {
-	let { videoElement: t, onReady: n, onFirstData: r, onError: i, signal: a } = e, o = null, s = null, c = null, l = !1, u = !1, d = new Uint8Array(Bc.MSE.BUFFER_SIZE), f = 0, p = [], m = Hc();
+function Qc(e) {
+	let { videoElement: t, onReady: n, onFirstData: r, onError: i, signal: a } = e, o = null, s = null, c = null, l = !1, u = !1, d = new Uint8Array(Vc.MSE.BUFFER_SIZE), f = 0, p = [], m = Uc();
 	function h() {
 		if (a.aborted) return;
-		let e = Yc();
+		let e = Xc();
 		if (!e) {
 			i(/* @__PURE__ */ Error("MediaSource not supported"));
 			return;
 		}
 		o = new e();
-		let n = Jc(), r = t.src;
+		let n = Yc(), r = t.src;
 		return o.addEventListener("sourceopen", () => {
 			a.aborted || !n && r && r.startsWith("blob:") && r !== t.src && URL.revokeObjectURL(r);
-		}, { once: !0 }), n ? (t.disableRemotePlayback = !0, t.srcObject = o) : (c = URL.createObjectURL(o), t.src = c, t.srcObject = null), Uc(m, e.isTypeSupported.bind(e));
+		}, { once: !0 }), n ? (t.disableRemotePlayback = !0, t.srcObject = o) : (c = URL.createObjectURL(o), t.src = c, t.srcObject = null), Wc(m, e.isTypeSupported.bind(e));
 	}
 	function g(e) {
 		if (a.aborted || !o) return;
@@ -4140,8 +4143,8 @@ function Zc(e) {
 			}, { once: !0 });
 			return;
 		}
-		f = 0, d = new Uint8Array(Bc.MSE.BUFFER_SIZE);
-		let t = Yc();
+		f = 0, d = new Uint8Array(Vc.MSE.BUFFER_SIZE);
+		let t = Xc();
 		if (t && !t.isTypeSupported(e)) {
 			i(/* @__PURE__ */ Error(`MIME type not supported: ${e}`));
 			return;
@@ -4165,7 +4168,7 @@ function Zc(e) {
 				y(e) || i(e instanceof Error ? e : Error(String(e)));
 			}
 			if (!s.updating && s.buffered?.length) {
-				let e = s.buffered.end(s.buffered.length - 1), n = e - Bc.MSE.BUFFER_WINDOW, i = s.buffered.start(0);
+				let e = s.buffered.end(s.buffered.length - 1), n = e - Vc.MSE.BUFFER_WINDOW, i = s.buffered.start(0);
 				if (u || (u = !0, r()), n > i) try {
 					s.remove(i, n), o.setLiveSeekableRange(n, e);
 				} catch {}
@@ -4205,7 +4208,7 @@ function Zc(e) {
 	function y(e) {
 		if (e?.name !== "QuotaExceededError" || !s || s.updating || !s.buffered?.length) return !1;
 		try {
-			let e = s.buffered.start(0), t = s.buffered.end(s.buffered.length - 1), n = Math.max(e + 1, t - Bc.MSE.BUFFER_WINDOW);
+			let e = s.buffered.start(0), t = s.buffered.end(s.buffered.length - 1), n = Math.max(e + 1, t - Vc.MSE.BUFFER_WINDOW);
 			return n <= e ? !1 : (s.remove(e, n), !0);
 		} catch {
 			return !1;
@@ -4239,17 +4242,17 @@ function Zc(e) {
 		close: b
 	};
 }
-async function Qc(e) {
+async function $c(e) {
 	try {
 		await e.play();
 	} catch {
-		e.muted || (e.muted = !0, await Qc(e));
+		e.muted || (e.muted = !0, await $c(e));
 	}
 }
-function $c(e, t, n) {
+function el(e, t, n) {
 	let r = new RTCPeerConnection({
 		bundlePolicy: "max-bundle",
-		iceServers: [...Bc.WEBRTC.ICE_SERVERS]
+		iceServers: [...Vc.WEBRTC.ICE_SERVERS]
 	});
 	return r.onicecandidate = (r) => {
 		if (e.aborted || n && r.candidate?.protocol === "udp") return;
@@ -4257,34 +4260,34 @@ function $c(e, t, n) {
 		i && t(i);
 	}, r;
 }
-async function el(e, t, n) {
+async function tl(e, t, n) {
 	t.aborted || !e || await e.setRemoteDescription({
 		type: "answer",
 		sdp: n
 	});
 }
-async function tl(e, t, n, r) {
+async function nl(e, t, n, r) {
 	t.aborted || !e || r && n.includes(" udp ") || await e.addIceCandidate({
 		candidate: n,
 		sdpMid: "0"
 	});
 }
-async function nl(e, t, n) {
+async function rl(e, t, n) {
 	if (!(t.aborted || !e)) try {
 		await e.sender.replaceTrack(n);
 	} catch {}
 }
-function rl(e) {
+function il(e) {
 	e.micTransceiver &&= (e.micTransceiver.sender.replaceTrack(null).catch(() => {}), null), e.pc &&= (e.pc.getTransceivers().forEach((e) => e.sender?.track?.stop()), e.pc.close(), null), e.isConnected = !1;
 }
-function il(e) {
+function al(e) {
 	let { mode: t, onConnected: n, onDisconnected: r, onFailed: i, onCandidate: a, signal: o } = e, s = {
 		pc: null,
 		micTransceiver: null,
 		isConnected: !1
 	}, c = t === "webrtc/tcp";
 	function l() {
-		let e = $c(o, a, c);
+		let e = el(o, a, c);
 		return e.onconnectionstatechange = () => {
 			if (o.aborted) return;
 			let t = e.connectionState;
@@ -4302,7 +4305,7 @@ function il(e) {
 		return await s.pc.setLocalDescription(e), e.sdp;
 	}
 	function d() {
-		rl(s);
+		il(s);
 	}
 	return o.addEventListener("abort", d, { once: !0 }), {
 		get pc() {
@@ -4315,20 +4318,20 @@ function il(e) {
 			return s.isConnected;
 		},
 		createOffer: u,
-		handleAnswer: (e) => el(s.pc, o, e),
-		handleCandidate: (e) => tl(s.pc, o, e, c),
-		setMicrophoneTrack: (e) => nl(s.micTransceiver, o, e),
+		handleAnswer: (e) => tl(s.pc, o, e),
+		handleCandidate: (e) => nl(s.pc, o, e, c),
+		setMicrophoneTrack: (e) => rl(s.micTransceiver, o, e),
 		close: d
 	};
 }
-function al(e) {
+function ol(e) {
 	let { onConnected: t, onDisconnected: n, onCandidate: r, signal: i } = e, a = {
 		pc: null,
 		micTransceiver: null,
 		isConnected: !1
 	};
 	function o() {
-		let e = $c(i, r, !1);
+		let e = el(i, r, !1);
 		return e.onconnectionstatechange = () => {
 			if (i.aborted) return;
 			let r = e.connectionState;
@@ -4342,20 +4345,20 @@ function al(e) {
 		return await a.pc.setLocalDescription(e), e.sdp;
 	}
 	function c() {
-		rl(a);
+		il(a);
 	}
 	return i.addEventListener("abort", c, { once: !0 }), {
 		get isConnected() {
 			return a.isConnected;
 		},
 		createOffer: s,
-		handleAnswer: (e) => el(a.pc, i, e),
-		handleCandidate: (e) => tl(a.pc, i, e, !1),
-		setMicrophoneTrack: (e) => nl(a.micTransceiver, i, e),
+		handleAnswer: (e) => tl(a.pc, i, e),
+		handleCandidate: (e) => nl(a.pc, i, e, !1),
+		setMicrophoneTrack: (e) => rl(a.micTransceiver, i, e),
 		close: c
 	};
 }
-async function ol(e, t) {
+async function sl(e, t) {
 	switch (t.type) {
 		case "webrtc/answer":
 			await e.handleAnswer(t.value);
@@ -4365,7 +4368,7 @@ async function ol(e, t) {
 			break;
 	}
 }
-var $ = new T("StreamConnection"), sl = class {
+var $ = new T("StreamConnection"), cl = class {
 	status;
 	activeMode;
 	requestedMode;
@@ -4423,15 +4426,15 @@ var $ = new T("StreamConnection"), sl = class {
 		this.target = t.target, this.wsTransport = t.wsTransport;
 		let { autoStart: n = !0 } = e;
 		this.status = /* @__PURE__ */ V("idle"), this.activeMode = /* @__PURE__ */ V("webrtc"), this.activeResolution = /* @__PURE__ */ V("low-resolution"), this.source = /* @__PURE__ */ H(), this.hasVideo = /* @__PURE__ */ V(!1), this.hasAudio = /* @__PURE__ */ V(!1), this.hasBackchannel = /* @__PURE__ */ V(!1), this.isPlaying = /* @__PURE__ */ V(!1), this.error = /* @__PURE__ */ V(), this.probeInfo = /* @__PURE__ */ H(), this.muted = /* @__PURE__ */ V(!0), this.paused = /* @__PURE__ */ V(!1), this.nativeWidth = /* @__PURE__ */ V(0), this.nativeHeight = /* @__PURE__ */ V(0), this.requestedMode = /* @__PURE__ */ V(W(e.mode) ?? "auto"), this.requestedResolution = /* @__PURE__ */ V(W(e.resolution) ?? "high-resolution"), this.camera = X(() => W(e.camera)), this.videoElement = X(() => W(e.videoElement)), this.containerElement = X(() => W(e.containerElement)), this.isReady = X(() => !!this.camera.value && !!this.videoElement.value && !!this.target.value), this.effectiveMode = X(() => this.requestedMode.value === "auto" ? this.activeMode.value : this.requestedMode.value), this.scope.run(() => {
-			let { onTabPaused: e, onTabVisible: t } = zc(), r = Go(() => {
+			let { onTabPaused: e, onTabVisible: t } = Bc(), r = Go(() => {
 				this.wsHandle?.readyState === WebSocket.CONNECTING && (this.disconnectWebSocket(), !this.abortController.signal.aborted && this.status.value !== "closed" && this.restart());
-			}, Bc.WEBRTC.WS_CONNECT_TIMEOUT, { immediate: !1 }), i = Go(() => {
+			}, Vc.WEBRTC.WS_CONNECT_TIMEOUT, { immediate: !1 }), i = Go(() => {
 				this.webrtcHandler && !this.webrtcHandler.isConnected && (this.requestedMode.value === "auto" ? (this.webrtcHandler.close(), this.webrtcHandler = void 0, this.activeMode.value = "mse", this.mseHandler?.isReady ? this.status.value = "connected" : this.startMSE()) : this.restart());
-			}, Bc.WEBRTC.CONNECT_TIMEOUT, { immediate: !1 }), a = Go(() => {
+			}, Vc.WEBRTC.CONNECT_TIMEOUT, { immediate: !1 }), a = Go(() => {
 				this.abortController.signal.aborted || this.status.value === "connected" || this.status.value === "closed" || this.mseHandler && !this.mseHandler.isReady && this.restart();
-			}, Bc.WEBRTC.CONNECT_TIMEOUT, { immediate: !1 }), o = Go(() => {
+			}, Vc.WEBRTC.CONNECT_TIMEOUT, { immediate: !1 }), o = Go(() => {
 				this.abortController.signal.aborted || this.restart();
-			}, Bc.WEBRTC.RECONNECT_DELAY, { immediate: !1 });
+			}, Vc.WEBRTC.RECONNECT_DELAY, { immediate: !1 });
 			this.startWsConnectTimeout = r.start, this.stopWsConnectTimeout = r.stop, this.startConnectTimeout = i.start, this.stopConnectTimeout = i.stop, this.startMseConnectTimeout = a.start, this.stopMseConnectTimeout = a.stop, this.startReconnectTimeout = o.start, this.stopReconnectTimeout = o.stop, this.setupWatchers(), this.offTabPaused = e(() => {
 				if ($.debug(`onTabPaused fired — status=${this.status.value}, isReady=${this.isReady.value}, target=${!!this.target.value}`), this.status.value === "idle" || this.status.value === "closed") {
 					$.debug(`onTabPaused — already in ${this.status.value}, skipping stop()`);
@@ -4533,7 +4536,7 @@ var $ = new T("StreamConnection"), sl = class {
 		this.status.value = "reconnecting", this.isPlaying.value = !1, this.cleanup(), this.abortController = new AbortController();
 		let e = ++this.connectionGeneration;
 		try {
-			await Xc(1e3, this.abortController.signal);
+			await Zc(1e3, this.abortController.signal);
 		} catch {
 			return;
 		}
@@ -4602,18 +4605,18 @@ var $ = new T("StreamConnection"), sl = class {
 				if (t.srcObject instanceof MediaStream) {
 					let e = t.srcObject;
 					if (e.active && e.getTracks().some((e) => e.readyState === "live")) {
-						Qc(t), this.lastMediaStream = e;
+						$c(t), this.lastMediaStream = e;
 						return;
 					}
 				}
 				if (this.status.value === "connected" && this.activeMode.value !== "mse") {
 					let e = this.lastMediaStream;
-					e?.active && e.getTracks().some((e) => e.readyState === "live") ? (t.srcObject = e, Qc(t)) : this.restart();
+					e?.active && e.getTracks().some((e) => e.readyState === "live") ? (t.srcObject = e, $c(t)) : this.restart();
 				} else if (this.status.value === "connected" && this.activeMode.value === "mse") this.restart();
 				else if (this.status.value === "connecting" || this.status.value === "reconnecting") {
 					let e = G(() => this.isPlaying.value, (t) => {
 						let n = this.videoElement.value;
-						t && n?.srcObject instanceof MediaStream ? (Qc(n), e()) : t && n && !n.srcObject && this.lastMediaStream?.active && (n.srcObject = this.lastMediaStream, Qc(n), e());
+						t && n?.srcObject instanceof MediaStream ? ($c(n), e()) : t && n && !n.srcObject && this.lastMediaStream?.active && (n.srcObject = this.lastMediaStream, $c(n), e());
 					}, { immediate: !0 });
 					this.stopWatchers.push(e);
 				}
@@ -4668,7 +4671,7 @@ var $ = new T("StreamConnection"), sl = class {
 		this.disconnectWebSocket();
 		let e = this.camera.value;
 		if (this.abortController.signal.aborted || !e || !this.source.value || !this.target.value) return;
-		let t = this.source.value.name ?? this.source.value.role ?? this.source.value._id, n = Vs(e.name.value, t);
+		let t = this.source.value.name ?? this.source.value.role ?? this.source.value._id, n = Hs(e.name.value, t);
 		this.startWsConnectTimeout(), this.wsHandle = this.wsTransport.open({
 			path: "/api/go2rtc",
 			query: { src: n },
@@ -4705,7 +4708,7 @@ var $ = new T("StreamConnection"), sl = class {
 		switch (e.type) {
 			case "webrtc/answer":
 			case "webrtc/candidate":
-				this.webrtcHandler ? ol(this.webrtcHandler, e) : this.backchannelHandler && ol(this.backchannelHandler, e);
+				this.webrtcHandler ? sl(this.webrtcHandler, e) : this.backchannelHandler && sl(this.backchannelHandler, e);
 				break;
 			case "mse":
 				this.mseHandler && typeof e.value == "string" && this.mseHandler.initializeBuffer(e.value);
@@ -4717,7 +4720,7 @@ var $ = new T("StreamConnection"), sl = class {
 	}
 	async startWebRTC(e) {
 		if (this.abortController.signal.aborted) return;
-		this.startConnectTimeout(), this.webrtcHandler = il({
+		this.startConnectTimeout(), this.webrtcHandler = al({
 			mode: e,
 			signal: this.abortController.signal,
 			onConnected: (e) => this.handleWebRTCConnected(e),
@@ -4737,7 +4740,7 @@ var $ = new T("StreamConnection"), sl = class {
 	handleWebRTCConnected(e) {
 		if (this.abortController.signal.aborted) return;
 		let t = this.videoElement.value;
-		t && (this.stopConnectTimeout(), this.activeMode.value = this.requestedMode.value === "auto" ? "webrtc" : this.requestedMode.value, this.lastMediaStream = e, t.srcObject = e, t.muted = this.muted.value, Qc(t), this.status.value = "connected", this.handleFirstFrameWebRTC(e), this.requestedMode.value === "auto" && this.mseHandler && (this.mseHandler.close(), this.mseHandler = void 0, this.stopMseConnectTimeout()));
+		t && (this.stopConnectTimeout(), this.activeMode.value = this.requestedMode.value === "auto" ? "webrtc" : this.requestedMode.value, this.lastMediaStream = e, t.srcObject = e, t.muted = this.muted.value, $c(t), this.status.value = "connected", this.handleFirstFrameWebRTC(e), this.requestedMode.value === "auto" && this.mseHandler && (this.mseHandler.close(), this.mseHandler = void 0, this.stopMseConnectTimeout()));
 	}
 	handleWebRTCDisconnected() {
 		this.status.value !== "closed" && !this.abortController.signal.aborted && (this.status.value = "reconnecting", this.requestedMode.value === "auto" && this.mseHandler?.isReady ? (this.webrtcHandler?.close(), this.webrtcHandler = void 0, this.activeMode.value = "mse", this.status.value = "connected") : this.restart());
@@ -4749,7 +4752,7 @@ var $ = new T("StreamConnection"), sl = class {
 		if (this.mseHandler) return;
 		let e = this.videoElement.value;
 		if (this.abortController.signal.aborted || !e) return;
-		this.mseHandler = Zc({
+		this.mseHandler = Qc({
 			videoElement: e,
 			signal: this.abortController.signal,
 			onReady: () => this.handleMSEReady(),
@@ -4770,12 +4773,12 @@ var $ = new T("StreamConnection"), sl = class {
 	handleMSEFirstData() {
 		if (this.abortController.signal.aborted) return;
 		let e = this.videoElement.value;
-		e && Qc(e);
+		e && $c(e);
 	}
 	async startAutoMode() {
 		if (this.abortController.signal.aborted) return;
 		let e = this.probeInfo.value ?? await this.probeStream();
-		if (e && !qc(e).compatible) {
+		if (e && !Jc(e).compatible) {
 			this.activeMode.value = "mse", this.startMSE();
 			return;
 		}
@@ -4819,7 +4822,7 @@ var $ = new T("StreamConnection"), sl = class {
 	}
 	async startBackchannel() {
 		if (this.abortController.signal.aborted || !this.wsHandle || this.wsHandle.readyState !== WebSocket.OPEN) return;
-		this.backchannelHandler = al({
+		this.backchannelHandler = ol({
 			signal: this.abortController.signal,
 			onCandidate: (e) => this.sendWsMessage({
 				type: "webrtc/candidate",
@@ -4842,10 +4845,10 @@ var $ = new T("StreamConnection"), sl = class {
 		this.backchannelHandler?.close(), this.backchannelHandler = void 0, this.pendingMicTrack = null;
 	}
 };
-function cl(e) {
-	return new sl(e);
+function ll(e) {
+	return new cl(e);
 }
-var ll = class {
+var ul = class {
 	streams = /* @__PURE__ */ new Map();
 	releaseTimers = /* @__PURE__ */ new Map();
 	releaseDelay;
@@ -4918,7 +4921,7 @@ var ll = class {
 	clear() {
 		for (let e of this.releaseTimers.values()) clearTimeout(e);
 		this.releaseTimers.clear();
-		for (let [e, t] of this.streams) ul(t.stream), this.streams.delete(e);
+		for (let [e, t] of this.streams) dl(t.stream), this.streams.delete(e);
 	}
 	getDebugInfo() {
 		return Array.from(this.streams.entries()).map(([e, t]) => ({
@@ -4951,18 +4954,18 @@ var ll = class {
 	}
 	doRelease(e) {
 		let t = this.streams.get(e);
-		t && (t.refCount <= 0 && (ul(t.stream), this.streams.delete(e)), this.releaseTimers.delete(e));
+		t && (t.refCount <= 0 && (dl(t.stream), this.streams.delete(e)), this.releaseTimers.delete(e));
 	}
 };
-function ul(e) {
+function dl(e) {
 	let t = e;
 	typeof t.destroy == "function" ? t.destroy() : t.stop();
 }
-var dl = new ll(), fl = /* @__PURE__ */ new WeakMap(), pl = [], ml = /* @__PURE__ */ H(null);
-function hl() {
-	ml.value = pl[pl.length - 1] ?? null;
+var fl = new ul(), pl = /* @__PURE__ */ new WeakMap(), ml = [], hl = /* @__PURE__ */ H(null);
+function gl() {
+	hl.value = ml[ml.length - 1] ?? null;
 }
-function gl(e, t = {}) {
+function _l(e, t = {}) {
 	let n = t.mode ?? "fit", r = /* @__PURE__ */ V(!1), i = /* @__PURE__ */ H(null);
 	G(() => W(e), (e) => {
 		i.value = e ?? null;
@@ -4974,7 +4977,7 @@ function gl(e, t = {}) {
 		let e = i.value;
 		if (!e || r.value) return;
 		let t = document.createElement("div");
-		t.className = `cui-fullscreen cui-fullscreen-${n}`, _l(t, n);
+		t.className = `cui-fullscreen cui-fullscreen-${n}`, vl(t, n);
 		let o = {
 			wrapper: t,
 			parent: e.parentElement,
@@ -4982,16 +4985,16 @@ function gl(e, t = {}) {
 			bodyOverflow: document.body.style.overflow,
 			htmlOverflow: document.documentElement.style.overflow
 		};
-		fl.set(e, o), e.setAttribute("data-cui-fullscreen", n), document.body.appendChild(t), t.appendChild(e), document.body.style.overflow = "hidden", document.documentElement.style.overflow = "hidden", document.addEventListener("keydown", a), pl.push(t), hl(), r.value = !0;
+		pl.set(e, o), e.setAttribute("data-cui-fullscreen", n), document.body.appendChild(t), t.appendChild(e), document.body.style.overflow = "hidden", document.documentElement.style.overflow = "hidden", document.addEventListener("keydown", a), ml.push(t), gl(), r.value = !0;
 	}
 	async function s() {
 		let e = i.value;
 		if (!e || !r.value) return;
-		let t = fl.get(e);
+		let t = pl.get(e);
 		if (!t) return;
-		fl.delete(e), e.removeAttribute("data-cui-fullscreen"), t.parent && (t.next && t.next.parentNode === t.parent ? t.parent.insertBefore(e, t.next) : t.parent.appendChild(e)), t.wrapper.remove(), document.body.style.overflow = t.bodyOverflow, document.documentElement.style.overflow = t.htmlOverflow, document.removeEventListener("keydown", a);
-		let n = pl.indexOf(t.wrapper);
-		n !== -1 && pl.splice(n, 1), hl(), r.value = !1;
+		pl.delete(e), e.removeAttribute("data-cui-fullscreen"), t.parent && (t.next && t.next.parentNode === t.parent ? t.parent.insertBefore(e, t.next) : t.parent.appendChild(e)), t.wrapper.remove(), document.body.style.overflow = t.bodyOverflow, document.documentElement.style.overflow = t.htmlOverflow, document.removeEventListener("keydown", a);
+		let n = ml.indexOf(t.wrapper);
+		n !== -1 && ml.splice(n, 1), gl(), r.value = !1;
 	}
 	async function c() {
 		r.value ? await s() : await o();
@@ -5006,7 +5009,7 @@ function gl(e, t = {}) {
 		toggle: c
 	};
 }
-function _l(e, t) {
+function vl(e, t) {
 	let n = {
 		position: "fixed",
 		top: "0",
@@ -5035,27 +5038,27 @@ function _l(e, t) {
 		overscrollBehavior: "contain"
 	});
 }
-var vl = 75, yl = 500, bl = 0, xl = 0;
-function Sl() {
+var yl = 75, bl = 500, xl = 0, Sl = 0;
+function Cl() {
 	let e = performance.now();
-	e - xl > yl && (bl = 0);
-	let t = bl * vl;
-	return bl++, xl = e, t;
-}
-function Cl(e) {
-	return !e || !e.isConnected ? !1 : e.checkVisibility?.() ?? e.offsetParent !== null;
+	e - Sl > bl && (xl = 0);
+	let t = xl * yl;
+	return xl++, Sl = e, t;
 }
 function wl(e) {
-	let { activityConfig: t, autoStart: n = !0, isolated: r = !1 } = e, i = () => W(n), a = e.startDelay ?? Sl(), o = [], { isConnected: s } = Bs(), c = X(() => W(e.camera)), l = X(() => typeof c.value == "string"), u = X(() => {
+	return !e || !e.isConnected ? !1 : e.checkVisibility?.() ?? e.offsetParent !== null;
+}
+function Tl(e) {
+	let { activityConfig: t, autoStart: n = !0, isolated: r = !1 } = e, i = () => W(n), a = e.startDelay ?? Cl(), o = [], { isConnected: s } = Bs(), c = X(() => W(e.camera)), l = X(() => typeof c.value == "string"), u = X(() => {
 		let e = c.value;
 		return typeof e == "string" ? e : e.name.value;
-	}), { camera: d, isLoading: f } = fc(X(() => l.value ? u.value : "")), p = X(() => l.value && f.value), m = X(() => l.value ? d.value : c.value), h, g, _, v = /* @__PURE__ */ H(), y = /* @__PURE__ */ H(), b = /* @__PURE__ */ H(), x = /* @__PURE__ */ H(), S = /* @__PURE__ */ H(), C = /* @__PURE__ */ H(), w = /* @__PURE__ */ V(!1), T = /* @__PURE__ */ V(!1), E = /* @__PURE__ */ V(!1), D = /* @__PURE__ */ V(0), ee = /* @__PURE__ */ V(0), O = /* @__PURE__ */ V(!1), te = /* @__PURE__ */ V(a <= 0);
+	}), { camera: d, isLoading: f } = pc(X(() => l.value ? u.value : "")), p = X(() => l.value && f.value), m = X(() => l.value ? d.value : c.value), h, g, _, v = /* @__PURE__ */ H(), y = /* @__PURE__ */ H(), b = /* @__PURE__ */ H(), x = /* @__PURE__ */ H(), S = /* @__PURE__ */ H(), C = /* @__PURE__ */ H(), w = /* @__PURE__ */ V(!1), T = /* @__PURE__ */ V(!1), E = /* @__PURE__ */ V(!1), D = /* @__PURE__ */ V(0), ee = /* @__PURE__ */ V(0), O = /* @__PURE__ */ V(!1), te = /* @__PURE__ */ V(a <= 0);
 	a > 0 && (h = setTimeout(() => {
 		te.value = !0;
 	}, a)), G(m, (e) => {
 		C.value = e;
 	}, { immediate: !0 });
-	let k = X(() => C.value?.disabled.value === !0), A = X(() => S.value?.status.value ?? "idle"), j = X(() => S.value?.isPlaying.value ?? !1), ne = X(() => S.value?.activeMode.value ?? "webrtc"), re = X(() => S.value?.activeResolution.value ?? "low-resolution"), M = X(() => S.value?.hasAudio.value ?? !1), N = X(() => S.value?.hasBackchannel.value ?? !1), ie = X(() => S.value?.error.value), ae = X(() => A.value === "reconnecting"), oe = X(() => p.value || !j.value && A.value !== "error"), P = X(() => M.value && A.value === "connected"), F = X(() => !!(typeof navigator < "u" && navigator.mediaDevices) && N.value), se = X(() => S.value?.muted.value ?? !0), I = X(() => S.value?.paused.value ?? !1), ce = X(() => typeof document < "u" && document.pictureInPictureEnabled && !!b.value), le = X(() => b.value), ue = X(() => y.value ?? v.value), L = Ec({
+	let k = X(() => C.value?.disabled.value === !0), A = X(() => S.value?.status.value ?? "idle"), j = X(() => S.value?.isPlaying.value ?? !1), ne = X(() => S.value?.activeMode.value ?? "webrtc"), re = X(() => S.value?.activeResolution.value ?? "low-resolution"), M = X(() => S.value?.hasAudio.value ?? !1), N = X(() => S.value?.hasBackchannel.value ?? !1), ie = X(() => S.value?.error.value), ae = X(() => A.value === "reconnecting"), oe = X(() => p.value || !j.value && A.value !== "error"), P = X(() => M.value && A.value === "connected"), F = X(() => !!(typeof navigator < "u" && navigator.mediaDevices) && N.value), se = X(() => S.value?.muted.value ?? !0), I = X(() => S.value?.paused.value ?? !1), ce = X(() => typeof document < "u" && document.pictureInPictureEnabled && !!b.value), le = X(() => b.value), ue = X(() => y.value ?? v.value), L = Dc({
 		initialMode: W(e.activityMode) ?? "always-on",
 		config: t,
 		onStreamStart: () => {
@@ -5064,14 +5067,14 @@ function wl(e) {
 		onStreamStop: () => {
 			if (w.value) {
 				let e = _ ?? u.value;
-				if (e && dl.getRefCount(e) > 1) return;
+				if (e && fl.getRefCount(e) > 1) return;
 			}
 			S.value?.stop();
 		},
 		isStreamPlaying: () => j.value
-	}), { isFullscreen: de, toggle: fe } = gl(ue);
+	}), { isFullscreen: de, toggle: fe } = _l(ue);
 	function pe() {
-		return g = cl({
+		return g = ll({
 			camera: C,
 			videoElement: x,
 			containerElement: v,
@@ -5091,9 +5094,9 @@ function wl(e) {
 	function _e() {
 		if (r) return;
 		let e = v.value, t = b.value;
-		if (!e || !t || t.parentElement === e || !Cl(e) || Cl(t.parentElement)) return;
+		if (!e || !t || t.parentElement === e || !wl(e) || wl(t.parentElement)) return;
 		ge(t, e), t.play().catch(() => {});
-		let n = u.value, i = n ? dl.get(n) : void 0;
+		let n = u.value, i = n ? fl.get(n) : void 0;
 		i && (i.containerElementRef = v);
 	}
 	function ve() {
@@ -5118,21 +5121,21 @@ function wl(e) {
 		}
 		let e = v.value, t = u.value, n = m.value;
 		if (!e || !t || !s.value) return;
-		let a = dl.acquire(t, v);
+		let a = fl.acquire(t, v);
 		if (a) {
 			T.value = !0, _ = t, w.value = !0, S.value = a.stream, n && a.cameraDeviceRef && (a.cameraDeviceRef.value = n);
 			let r = a.sharedVideoElement;
-			r || (r = he(), a.sharedVideoElement = r, dl.updateSharedVideoElement(t, r)), a.mediaStream?.active && (r.srcObject = a.mediaStream), e && (a.containerElementRef = v), b.value = r, a.videoElementRef.value = r, we(a.stream, r, t), i() && te.value && L.mode.value === "always-on" && !k.value && (a.stream.activeMode.value === "mse" ? r.play().catch(() => {}) : Se(a, r, t));
+			r || (r = he(), a.sharedVideoElement = r, fl.updateSharedVideoElement(t, r)), a.mediaStream?.active && (r.srcObject = a.mediaStream), e && (a.containerElementRef = v), b.value = r, a.videoElementRef.value = r, we(a.stream, r, t), i() && te.value && L.mode.value === "always-on" && !k.value && (a.stream.activeMode.value === "mse" ? r.play().catch(() => {}) : Se(a, r, t));
 		} else if (n) {
 			T.value = !0, _ = t, w.value = !1, S.value = me;
 			let e = he();
-			b.value = e, x.value = e, dl.register(t, me, x, C, v, e), i() && te.value && L.mode.value === "always-on" && !k.value && me.start();
+			b.value = e, x.value = e, fl.register(t, me, x, C, v, e), i() && te.value && L.mode.value === "always-on" && !k.value && me.start();
 			let n = G(() => me.isPlaying.value, (n) => {
-				n && e.srcObject instanceof MediaStream && dl.updateMediaStream(t, e.srcObject);
+				n && e.srcObject instanceof MediaStream && fl.updateMediaStream(t, e.srcObject);
 			}, { immediate: !0 });
 			o.push(n);
 			let r = G(() => me.status.value, (n) => {
-				n === "connected" && e.srcObject instanceof MediaStream && dl.updateMediaStream(t, e.srcObject);
+				n === "connected" && e.srcObject instanceof MediaStream && fl.updateMediaStream(t, e.srcObject);
 			});
 			o.push(r);
 		}
@@ -5140,13 +5143,13 @@ function wl(e) {
 	function Se(e, t, n) {
 		if (!e) return;
 		let r = e.stream, i = r.activeMode.value, a = r.status.value, o = e.mediaStream?.active && e.mediaStream.getTracks().some((e) => e.readyState === "live");
-		i === "mse" ? (dl.updateMediaStream(n, null), r.restart()) : o && e.mediaStream ? (t.srcObject = e.mediaStream, t.play().catch(() => {})) : a === "idle" || a === "closed" ? (r.start(), Ce(r, t, n)) : (a === "connected" && r.restart(), Ce(r, t, n));
+		i === "mse" ? (fl.updateMediaStream(n, null), r.restart()) : o && e.mediaStream ? (t.srcObject = e.mediaStream, t.play().catch(() => {})) : a === "idle" || a === "closed" ? (r.start(), Ce(r, t, n)) : (a === "connected" && r.restart(), Ce(r, t, n));
 	}
 	function Ce(e, t, n) {
 		let r = G([() => e.isPlaying.value, () => e.status.value], ([e, i]) => {
 			if (i === "connected" || e) {
-				let e = dl.get(n)?.mediaStream;
-				e?.active && e.getTracks().some((e) => e.readyState === "live") ? (t.srcObject = e, t.play().catch(() => {}), r()) : t.srcObject instanceof MediaStream && (dl.updateMediaStream(n, t.srcObject), t.play().catch(() => {}), r());
+				let e = fl.get(n)?.mediaStream;
+				e?.active && e.getTracks().some((e) => e.readyState === "live") ? (t.srcObject = e, t.play().catch(() => {}), r()) : t.srcObject instanceof MediaStream && (fl.updateMediaStream(n, t.srcObject), t.play().catch(() => {}), r());
 			}
 		}, { immediate: !0 });
 		o.push(r);
@@ -5154,12 +5157,12 @@ function wl(e) {
 	function we(e, t, n) {
 		let r = e.status.value !== "connected", i = G(() => e.status.value, (e) => {
 			e === "reconnecting" || e === "connecting" ? r = !0 : e === "connected" && r && (r = !1, setTimeout(() => {
-				t.srcObject instanceof MediaStream && (dl.updateMediaStream(n, t.srcObject), t.play().catch(() => {}));
+				t.srcObject instanceof MediaStream && (fl.updateMediaStream(n, t.srcObject), t.play().catch(() => {}));
 			}, 100));
 		}, { immediate: !0 });
 		o.push(i);
 		let a = G(() => e.isPlaying.value, (r) => {
-			r && e.activeMode.value !== "mse" && t.srcObject instanceof MediaStream && (dl.updateMediaStream(n, t.srcObject), t.play().catch(() => {}));
+			r && e.activeMode.value !== "mse" && t.srcObject instanceof MediaStream && (fl.updateMediaStream(n, t.srcObject), t.play().catch(() => {}));
 		}, { immediate: !0 });
 		o.push(a);
 	}
@@ -5177,7 +5180,7 @@ function wl(e) {
 	}
 	async function ke(e) {
 		let t = u.value;
-		t && dl.updateMediaStream(t, null), await S.value?.setMode(e);
+		t && fl.updateMediaStream(t, null), await S.value?.setMode(e);
 	}
 	async function Ae(e) {
 		await S.value?.setResolution(e);
@@ -5220,7 +5223,7 @@ function wl(e) {
 		if (o.length = 0, r) g?.destroy();
 		else {
 			let e = _, t = b.value;
-			e && T.value && dl.release(e, t, v), (!T.value || S.value !== me) && g?.destroy();
+			e && T.value && fl.release(e, t, v), (!T.value || S.value !== me) && g?.destroy();
 		}
 		L.dispose();
 	}
@@ -5347,28 +5350,28 @@ function wl(e) {
 }
 //#endregion
 //#region src/assets/logo.svg?url
-var Tl = "data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20xmlns:xlink='http://www.w3.org/1999/xlink'%20viewBox='0%200%20233.63%20233.63'%3e%3cdefs%3e%3cstyle%3e.cls-1{fill:url(%23dark_wine);}.cls-2{fill:url(%23light_wine);}.cls-3{fill:none;stroke:%23000;stroke-miterlimit:10;opacity:0;}.cls-4{fill:%23c5c6c8;}.cls-5{fill:%231a1e21;stroke:%233a3a3a;stroke-width:2px;}.cls-6{fill:%23fff;}%3c/style%3e%3clinearGradient%20id='dark_wine'%20x1='87.36'%20y1='158.67'%20x2='87.36'%20y2='59.85'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20offset='0'%20stop-color='%23730000'/%3e%3cstop%20offset='0.49'%20stop-color='%23a51733'/%3e%3c/linearGradient%3e%3clinearGradient%20id='light_wine'%20x1='113.06'%20y1='197.59'%20x2='113.06'%20y2='80.87'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20offset='0'%20stop-color='%23f44a6b'/%3e%3cstop%20offset='0.28'%20stop-color='%23df294c'/%3e%3c/linearGradient%3e%3c/defs%3e%3cg%20id='CameraUI_U'%3e%3cpath%20id='U_Left'%20class='cls-1'%20d='M47.05,119.47s7.58,16,14.12,23.42a45.28,45.28,0,0,0,16.37,11.86A49.46,49.46,0,0,0,99,158.62c9.43-.46,20.55-3.87,29.24-11.86-3.9,2.5-9.87,5.1-15.9,4.77a25.63,25.63,0,0,1-18.38-9.09c-9.39-10.31-7.62-28.35-7.75-32.68-.35-11.42.77-21.92-1.76-36.19-.46-2.64-1.79-5.19-4.55-8-1.83-1.86-8.4-5.75-13.42-5.74-7.31,0-12.95,3.71-15.38,7.84-2,3.41-3.06,4.22-4.23,25.08a217.23,217.23,0,0,0,.22,26.76Z'%20transform='translate(0.5%200.5)'/%3e%3cpath%20id='U_Right'%20class='cls-2'%20d='M144.12,89.6a16.24,16.24,0,0,1,4.06-4.9c4.16-3.4,9-3.67,10.92-3.82a19.7,19.7,0,0,1,12.53,4.58c1.19,1,6.11,5.58,7.13,17.29.73,8.51,3.31,65.93-37,87.14-4.22,2.22-18,9.25-35.66,7.38a62.43,62.43,0,0,1-20.8-6.11,65.8,65.8,0,0,1-18.89-14.23c-20.21-21.67-19.36-57.46-19.36-57.46s7.58,16,14.12,23.42a45.28,45.28,0,0,0,16.37,11.86A49.46,49.46,0,0,0,99,158.62c11.66-.57,25.93-5.64,35-18.32C143.52,126.8,138.46,100.51,144.12,89.6Z'%20transform='translate(0.5%200.5)'/%3e%3c/g%3e%3cg%20id='CameraUI_Lens'%3e%3ccircle%20id='ellipse'%20class='cls-3'%20cx='116.81'%20cy='116.81'%20r='116.31'/%3e%3cg%20id='lens'%3e%3ccircle%20id='lens_bg'%20class='cls-4'%20cx='159.13'%20cy='58.39'%20r='18.66'/%3e%3cpath%20id='lens_inner'%20class='cls-5'%20d='M169.64,58.31a11,11,0,1,1-22,0c0-6.08,4.93-11.86,11-11.86S169.64,52.23,169.64,58.31Z'%20transform='translate(0.5%200.5)'/%3e%3cg%20id='reflections'%3e%3cellipse%20id='dot_1'%20class='cls-6'%20cx='174.36'%20cy='53.69'%20rx='1.84'%20ry='1.42'/%3e%3cellipse%20id='dot_2'%20class='cls-6'%20cx='174.36'%20cy='57.08'%20rx='1.84'%20ry='1.42'/%3e%3cellipse%20id='dot_3'%20class='cls-6'%20cx='174.36'%20cy='60.46'%20rx='1.84'%20ry='1.42'/%3e%3ccircle%20id='dot_4'%20class='cls-6'%20cx='164.09'%20cy='63.77'%20r='1.66'/%3e%3cpath%20id='wide_1'%20class='cls-6'%20d='M156.63,48.9c-1.07-.88-5.52,3.09-6.31,5.43a1.53,1.53,0,0,0,0,1.26c.43.69,1.73.61,2.19.54,2.68-.44,4.71-4.09,4.8-4.37A3.21,3.21,0,0,0,156.63,48.9Z'%20transform='translate(0.5%200.5)'/%3e%3c/g%3e%3c/g%3e%3c/g%3e%3c/svg%3e", El = Symbol("cameraui-card-hass"), Dl = Symbol("cameraui-card-config"), Ol = Symbol("cameraui-grid-config"), kl = {
+var El = "data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20xmlns:xlink='http://www.w3.org/1999/xlink'%20viewBox='0%200%20233.63%20233.63'%3e%3cdefs%3e%3cstyle%3e.cls-1{fill:url(%23dark_wine);}.cls-2{fill:url(%23light_wine);}.cls-3{fill:none;stroke:%23000;stroke-miterlimit:10;opacity:0;}.cls-4{fill:%23c5c6c8;}.cls-5{fill:%231a1e21;stroke:%233a3a3a;stroke-width:2px;}.cls-6{fill:%23fff;}%3c/style%3e%3clinearGradient%20id='dark_wine'%20x1='87.36'%20y1='158.67'%20x2='87.36'%20y2='59.85'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20offset='0'%20stop-color='%23730000'/%3e%3cstop%20offset='0.49'%20stop-color='%23a51733'/%3e%3c/linearGradient%3e%3clinearGradient%20id='light_wine'%20x1='113.06'%20y1='197.59'%20x2='113.06'%20y2='80.87'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20offset='0'%20stop-color='%23f44a6b'/%3e%3cstop%20offset='0.28'%20stop-color='%23df294c'/%3e%3c/linearGradient%3e%3c/defs%3e%3cg%20id='CameraUI_U'%3e%3cpath%20id='U_Left'%20class='cls-1'%20d='M47.05,119.47s7.58,16,14.12,23.42a45.28,45.28,0,0,0,16.37,11.86A49.46,49.46,0,0,0,99,158.62c9.43-.46,20.55-3.87,29.24-11.86-3.9,2.5-9.87,5.1-15.9,4.77a25.63,25.63,0,0,1-18.38-9.09c-9.39-10.31-7.62-28.35-7.75-32.68-.35-11.42.77-21.92-1.76-36.19-.46-2.64-1.79-5.19-4.55-8-1.83-1.86-8.4-5.75-13.42-5.74-7.31,0-12.95,3.71-15.38,7.84-2,3.41-3.06,4.22-4.23,25.08a217.23,217.23,0,0,0,.22,26.76Z'%20transform='translate(0.5%200.5)'/%3e%3cpath%20id='U_Right'%20class='cls-2'%20d='M144.12,89.6a16.24,16.24,0,0,1,4.06-4.9c4.16-3.4,9-3.67,10.92-3.82a19.7,19.7,0,0,1,12.53,4.58c1.19,1,6.11,5.58,7.13,17.29.73,8.51,3.31,65.93-37,87.14-4.22,2.22-18,9.25-35.66,7.38a62.43,62.43,0,0,1-20.8-6.11,65.8,65.8,0,0,1-18.89-14.23c-20.21-21.67-19.36-57.46-19.36-57.46s7.58,16,14.12,23.42a45.28,45.28,0,0,0,16.37,11.86A49.46,49.46,0,0,0,99,158.62c11.66-.57,25.93-5.64,35-18.32C143.52,126.8,138.46,100.51,144.12,89.6Z'%20transform='translate(0.5%200.5)'/%3e%3c/g%3e%3cg%20id='CameraUI_Lens'%3e%3ccircle%20id='ellipse'%20class='cls-3'%20cx='116.81'%20cy='116.81'%20r='116.31'/%3e%3cg%20id='lens'%3e%3ccircle%20id='lens_bg'%20class='cls-4'%20cx='159.13'%20cy='58.39'%20r='18.66'/%3e%3cpath%20id='lens_inner'%20class='cls-5'%20d='M169.64,58.31a11,11,0,1,1-22,0c0-6.08,4.93-11.86,11-11.86S169.64,52.23,169.64,58.31Z'%20transform='translate(0.5%200.5)'/%3e%3cg%20id='reflections'%3e%3cellipse%20id='dot_1'%20class='cls-6'%20cx='174.36'%20cy='53.69'%20rx='1.84'%20ry='1.42'/%3e%3cellipse%20id='dot_2'%20class='cls-6'%20cx='174.36'%20cy='57.08'%20rx='1.84'%20ry='1.42'/%3e%3cellipse%20id='dot_3'%20class='cls-6'%20cx='174.36'%20cy='60.46'%20rx='1.84'%20ry='1.42'/%3e%3ccircle%20id='dot_4'%20class='cls-6'%20cx='164.09'%20cy='63.77'%20r='1.66'/%3e%3cpath%20id='wide_1'%20class='cls-6'%20d='M156.63,48.9c-1.07-.88-5.52,3.09-6.31,5.43a1.53,1.53,0,0,0,0,1.26c.43.69,1.73.61,2.19.54,2.68-.44,4.71-4.09,4.8-4.37A3.21,3.21,0,0,0,156.63,48.9Z'%20transform='translate(0.5%200.5)'/%3e%3c/g%3e%3c/g%3e%3c/g%3e%3c/svg%3e", Dl = Symbol("cameraui-card-hass"), Ol = Symbol("cameraui-card-config"), kl = Symbol("cameraui-grid-config"), Al = {
 	viewBox: "0 0 24 24",
 	width: "1.2em",
 	height: "1.2em"
 };
-function Al(e, t) {
-	return K(), q("svg", kl, [...t[0] ||= [J("path", {
+function jl(e, t) {
+	return K(), q("svg", Al, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "m12 5.69l5 4.5V18h-2v-6H9v6H7v-7.81zM12 3L2 12h3v8h6v-6h2v6h6v-8h3"
 	}, null, -1)]]);
 }
-var jl = fn({
+var Ml = fn({
 	name: "mdi-home-outline",
-	render: Al
-}), Ml = { class: "pointer-events-none absolute inset-0 z-10" }, Nl = 36, Pl = 44, Fl = 6, Il = 200, Ll = .05, Rl = /* @__PURE__ */ dr({
+	render: jl
+}), Nl = { class: "pointer-events-none absolute inset-0 z-10" }, Pl = 36, Fl = 44, Il = 6, Ll = 200, Rl = .05, zl = /* @__PURE__ */ dr({
 	__name: "CardPtz",
 	props: {
 		entity: {},
 		caps: {}
 	},
 	setup(e) {
-		let t = e, n = er(El), r = /* @__PURE__ */ V(), i = /* @__PURE__ */ V(), a = /* @__PURE__ */ nn({
+		let t = e, n = er(Dl), r = /* @__PURE__ */ V(), i = /* @__PURE__ */ V(), a = /* @__PURE__ */ nn({
 			x: 0,
 			y: 0
 		}), o = /* @__PURE__ */ V(0), s = X(() => t.caps.includes("pan")), c = X(() => t.caps.includes("tilt")), l = X(() => t.caps.includes("zoom")), u = X(() => t.caps.includes("home")), d = X(() => s.value || c.value), f = 0, p = {
@@ -5384,7 +5387,7 @@ var jl = fn({
 		}
 		function _(e, t, n) {
 			let r = Date.now();
-			!(Math.abs(e - p.pan) > Ll || Math.abs(t - p.tilt) > Ll || Math.abs(n - p.zoom) > Ll) || r - f < Il || (f = r, p = {
+			!(Math.abs(e - p.pan) > Rl || Math.abs(t - p.tilt) > Rl || Math.abs(n - p.zoom) > Rl) || r - f < Ll || (f = r, p = {
 				pan: e,
 				tilt: t,
 				zoom: n
@@ -5408,10 +5411,10 @@ var jl = fn({
 			t.setPointerCapture(e.pointerId);
 			let n = t.getBoundingClientRect(), i = n.left + n.width / 2, o = n.top + n.height / 2, l = !1, d = (e) => {
 				let t = e.clientX - i, n = e.clientY - o;
-				if (!l && Math.hypot(t, n) < Fl) return;
+				if (!l && Math.hypot(t, n) < Il) return;
 				l = !0, m = !0;
 				let r = Math.hypot(t, n);
-				r > Nl && (t = t / r * Nl, n = n / r * Nl), a.x = t, a.y = n, _(s.value ? h(t / Nl) : 0, c.value ? h(-n / Nl) : 0, 0);
+				r > Pl && (t = t / r * Pl, n = n / r * Pl), a.x = t, a.y = n, _(s.value ? h(t / Pl) : 0, c.value ? h(-n / Pl) : 0, 0);
 			}, f = () => {
 				t.removeEventListener("pointermove", d), t.removeEventListener("pointerup", f), t.removeEventListener("pointercancel", f), a.x = 0, a.y = 0, l ? v() : u.value && g({ action: "home" });
 			};
@@ -5423,14 +5426,14 @@ var jl = fn({
 			t.setPointerCapture(e.pointerId);
 			let n = t.getBoundingClientRect(), r = n.top + n.height / 2, a = (e) => {
 				m = !0;
-				let t = Math.max(-44, Math.min(Pl, e.clientY - r));
-				o.value = t, _(0, 0, h(-t / Pl));
+				let t = Math.max(-44, Math.min(Fl, e.clientY - r));
+				o.value = t, _(0, 0, h(-t / Fl));
 			}, s = () => {
 				t.removeEventListener("pointermove", a), t.removeEventListener("pointerup", s), t.removeEventListener("pointercancel", s), o.value = 0, v();
 			};
 			t.addEventListener("pointermove", a), t.addEventListener("pointerup", s), t.addEventListener("pointercancel", s);
 		}
-		return Ar(v), (e, t) => (K(), q("div", Ml, [U(l) ? (K(), q("div", {
+		return Ar(v), (e, t) => (K(), q("div", Nl, [U(l) ? (K(), q("div", {
 			key: 0,
 			ref_key: "zoomEl",
 			ref: i,
@@ -5452,12 +5455,12 @@ var jl = fn({
 		}, [J("div", {
 			class: "cui-ptz-knob",
 			style: De({ transform: `translate(calc(-50% + ${U(a).x}px), calc(-50% + ${U(a).y}px))` })
-		}, [U(u) ? (K(), sa(U(jl), {
+		}, [U(u) ? (K(), sa(U(Ml), {
 			key: 0,
 			class: "cui-ptz-knob-icon"
 		})) : Y("", !0)], 4)], 544)) : Y("", !0)]));
 	}
-}), zl = /* @__PURE__ */ dr({
+}), Bl = /* @__PURE__ */ dr({
 	__name: "CardSpinner",
 	props: { size: { default: 30 } },
 	setup(e) {
@@ -5481,7 +5484,7 @@ var jl = fn({
 });
 //#endregion
 //#region src/device.ts
-function Bl(e, t) {
+function Vl(e, t) {
 	let n = X(() => e.value.camera_name ?? ""), r = X(() => (e.value.sources ?? []).map((e) => ({
 		_id: e.id ?? e.name ?? "",
 		name: e.name,
@@ -5552,83 +5555,83 @@ function Bl(e, t) {
 }
 //#endregion
 //#region ~icons/basil/pause-solid
-var Vl = {
+var Hl = {
 	viewBox: "0 0 24 24",
 	width: "1.2em",
 	height: "1.2em"
 };
-function Hl(e, t) {
-	return K(), q("svg", Vl, [...t[0] ||= [J("path", {
+function Ul(e, t) {
+	return K(), q("svg", Hl, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "M17.276 5.47c.435.16.724.575.724 1.039V17.49c0 .464-.29.879-.724 1.039a3.7 3.7 0 0 1-2.552 0A1.11 1.11 0 0 1 14 17.491V6.51c0-.464.29-.879.724-1.04a3.7 3.7 0 0 1 2.552 0m-8 0c.435.16.724.575.724 1.039V17.49c0 .464-.29.879-.724 1.039a3.7 3.7 0 0 1-2.552 0A1.11 1.11 0 0 1 6 17.491V6.51c0-.464.29-.879.724-1.04a3.7 3.7 0 0 1 2.552 0"
 	}, null, -1)]]);
 }
-var Ul = fn({
+var Wl = fn({
 	name: "basil-pause-solid",
-	render: Hl
-}), Wl = {
+	render: Ul
+}), Gl = {
 	viewBox: "0 0 24 24",
 	width: "1.2em",
 	height: "1.2em"
 };
-function Gl(e, t) {
-	return K(), q("svg", Wl, [...t[0] ||= [J("path", {
+function Kl(e, t) {
+	return K(), q("svg", Gl, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "M19.266 13.516a1.917 1.917 0 0 0 0-3.032A35.8 35.8 0 0 0 9.35 5.068l-.653-.232c-1.248-.443-2.567.401-2.736 1.69a42.5 42.5 0 0 0 0 10.948c.17 1.289 1.488 2.133 2.736 1.69l.653-.232a35.8 35.8 0 0 0 9.916-5.416"
 	}, null, -1)]]);
 }
-var Kl = fn({
+var ql = fn({
 	name: "basil-play-solid",
-	render: Gl
-}), ql = {
+	render: Kl
+}), Jl = {
 	viewBox: "0 0 16 16",
 	width: "1.2em",
 	height: "1.2em"
 };
-function Jl(e, t) {
-	return K(), q("svg", ql, [...t[0] ||= [J("path", {
+function Yl(e, t) {
+	return K(), q("svg", Jl, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "M3.5 2A2.5 2.5 0 0 0 1 4.5v5A2.5 2.5 0 0 0 3.5 12H7v-2a2 2 0 0 1 2-2h5V4.5A2.5 2.5 0 0 0 11.5 2zM8 10a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1z"
 	}, null, -1)]]);
 }
-var Yl = fn({
+var Xl = fn({
 	name: "fluent-picture-in-picture-16-filled",
-	render: Jl
-}), Xl = {
+	render: Yl
+}), Zl = {
 	viewBox: "0 0 16 16",
 	width: "1.2em",
 	height: "1.2em"
 };
-function Zl(e, t) {
-	return K(), q("svg", Xl, [...t[0] ||= [J("path", {
+function Ql(e, t) {
+	return K(), q("svg", Zl, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "M1 4.5A2.5 2.5 0 0 1 3.5 2h8A2.5 2.5 0 0 1 14 4.5V8h-1V4.5A1.5 1.5 0 0 0 11.5 3h-8A1.5 1.5 0 0 0 2 4.5v5A1.5 1.5 0 0 0 3.5 11H7v1H3.5A2.5 2.5 0 0 1 1 9.5zM9 9a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1z"
 	}, null, -1)]]);
 }
-var Ql = fn({
+var $l = fn({
 	name: "fluent-picture-in-picture-16-regular",
-	render: Zl
-}), $l = {
+	render: Ql
+}), eu = {
 	viewBox: "0 0 32 32",
 	width: "1.2em",
 	height: "1.2em"
 };
-function eu(e, t) {
-	return K(), q("svg", $l, [...t[0] ||= [J("path", {
+function tu(e, t) {
+	return K(), q("svg", eu, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "m20.923 22.337l7.37 7.37a1 1 0 0 0 1.414-1.414l-26-26a1 1 0 0 0-1.414 1.414L4.884 6.3A4.5 4.5 0 0 0 2 10.5v11A4.5 4.5 0 0 0 6.5 26h10c2.2 0 4.03-1.578 4.423-3.663m1.577-3.374l5.52 5.519c1.056-.134 1.976-1.017 1.976-2.236V9.754c0-1.814-2.036-2.882-3.528-1.852l-3.968 2.74zM9.537 6L21 17.463V10.5A4.5 4.5 0 0 0 16.5 6z"
 	}, null, -1)]]);
 }
-var tu = fn({
+var nu = fn({
 	name: "fluent-video-off-32-filled",
-	render: eu
-}), nu = {
+	render: tu
+}), ru = {
 	viewBox: "0 0 16 16",
 	width: "1.2em",
 	height: "1.2em"
 };
-function ru(e, t) {
-	return K(), q("svg", nu, [...t[0] ||= [J("path", {
+function iu(e, t) {
+	return K(), q("svg", ru, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "M8 1a2 2 0 0 0-2 2v4a2 2 0 1 0 4 0V3a2 2 0 0 0-2-2"
 	}, null, -1), J("path", {
@@ -5636,16 +5639,16 @@ function ru(e, t) {
 		d: "M4.5 7A.75.75 0 0 0 3 7a5 5 0 0 0 4.25 4.944V13.5h-1.5a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-1.5v-1.556A5 5 0 0 0 13 7a.75.75 0 0 0-1.5 0a3.5 3.5 0 1 1-7 0"
 	}, null, -1)]]);
 }
-var iu = fn({
+var au = fn({
 	name: "heroicons-microphone-16-solid",
-	render: ru
-}), au = {
+	render: iu
+}), ou = {
 	viewBox: "0 0 16 16",
 	width: "1.2em",
 	height: "1.2em"
 };
-function ou(e, t) {
-	return K(), q("svg", au, [...t[0] ||= [J("path", {
+function su(e, t) {
+	return K(), q("svg", ou, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "M7.557 2.066A.75.75 0 0 1 8 2.75v10.5a.75.75 0 0 1-1.248.56L3.59 11H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.59l3.162-2.81a.75.75 0 0 1 .805-.124m5.393.984a.75.75 0 1 0-1.06 1.06a5.5 5.5 0 0 1 0 7.78a.75.75 0 1 0 1.06 1.06a7 7 0 0 0 0-9.9"
 	}, null, -1), J("path", {
@@ -5653,44 +5656,44 @@ function ou(e, t) {
 		d: "M10.828 5.172a.75.75 0 1 0-1.06 1.06a2.5 2.5 0 0 1 0 3.536a.75.75 0 1 0 1.06 1.06a4 4 0 0 0 0-5.656"
 	}, null, -1)]]);
 }
-var su = fn({
+var cu = fn({
 	name: "heroicons-speaker-wave-16-solid",
-	render: ou
-}), cu = {
+	render: su
+}), lu = {
 	viewBox: "0 0 16 16",
 	width: "1.2em",
 	height: "1.2em"
 };
-function lu(e, t) {
-	return K(), q("svg", cu, [...t[0] ||= [J("path", {
+function uu(e, t) {
+	return K(), q("svg", lu, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "M7.557 2.066A.75.75 0 0 1 8 2.75v10.5a.75.75 0 0 1-1.248.56L3.59 11H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.59l3.162-2.81a.75.75 0 0 1 .805-.124M11.28 5.72a.75.75 0 1 0-1.06 1.06L11.44 8l-1.22 1.22a.75.75 0 1 0 1.06 1.06l1.22-1.22l1.22 1.22a.75.75 0 1 0 1.06-1.06L13.56 8l1.22-1.22a.75.75 0 0 0-1.06-1.06L12.5 6.94z"
 	}, null, -1)]]);
 }
-var uu = fn({
+var du = fn({
 	name: "heroicons-speaker-x-mark-16-solid",
-	render: lu
-}), du = {
+	render: uu
+}), fu = {
 	viewBox: "0 0 24 24",
 	width: "1.2em",
 	height: "1.2em"
 };
-function fu(e, t) {
-	return K(), q("svg", du, [...t[0] ||= [J("path", {
+function pu(e, t) {
+	return K(), q("svg", fu, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "M13 11h5l-1.5-1.5l1.42-1.42L21.84 12l-3.92 3.92l-1.42-1.42L18 13h-5v5l1.5-1.5l1.42 1.42L12 21.84l-3.92-3.92L9.5 16.5L11 18v-5H6l1.5 1.5l-1.42 1.42L2.16 12l3.92-3.92L7.5 9.5L6 11h5V6L9.5 7.5L8.08 6.08L12 2.16l3.92 3.92L14.5 7.5L13 6z"
 	}, null, -1)]]);
 }
-var pu = fn({
+var mu = fn({
 	name: "mdi-arrow-all",
-	render: fu
-}), mu = {
+	render: pu
+}), hu = {
 	viewBox: "0 0 24 24",
 	width: "1.2em",
 	height: "1.2em"
 };
-function hu(e, t) {
-	return K(), q("svg", mu, [...t[0] ||= [J("g", {
+function gu(e, t) {
+	return K(), q("svg", hu, [...t[0] ||= [J("g", {
 		fill: "none",
 		"fill-rule": "evenodd"
 	}, [J("path", { d: "m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z" }), J("path", {
@@ -5698,16 +5701,16 @@ function hu(e, t) {
 		d: "M17.5 6.5H20a1.5 1.5 0 0 1 0 3h-3A2.5 2.5 0 0 1 14.5 7V4a1.5 1.5 0 0 1 3 0zM4 6.5h2.5V4a1.5 1.5 0 1 1 3 0v3A2.5 2.5 0 0 1 7 9.5H4a1.5 1.5 0 1 1 0-3m0 11h2.5V20a1.5 1.5 0 0 0 3 0v-3A2.5 2.5 0 0 0 7 14.5H4a1.5 1.5 0 0 0 0 3m16 0h-2.5V20a1.5 1.5 0 0 1-3 0v-3a2.5 2.5 0 0 1 2.5-2.5h3a1.5 1.5 0 0 1 0 3"
 	})], -1)]]);
 }
-var gu = fn({
+var _u = fn({
 	name: "mingcute-fullscreen-exit-fill",
-	render: hu
-}), _u = {
+	render: gu
+}), vu = {
 	viewBox: "0 0 24 24",
 	width: "1.2em",
 	height: "1.2em"
 };
-function vu(e, t) {
-	return K(), q("svg", _u, [...t[0] ||= [J("g", {
+function yu(e, t) {
+	return K(), q("svg", vu, [...t[0] ||= [J("g", {
 		fill: "none",
 		"fill-rule": "evenodd"
 	}, [J("path", { d: "m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z" }), J("path", {
@@ -5715,28 +5718,28 @@ function vu(e, t) {
 		d: "M18.5 5.5H16a1.5 1.5 0 0 1 0-3h3A2.5 2.5 0 0 1 21.5 5v3a1.5 1.5 0 0 1-3 0zM8 5.5H5.5V8a1.5 1.5 0 1 1-3 0V5A2.5 2.5 0 0 1 5 2.5h3a1.5 1.5 0 1 1 0 3m0 13H5.5V16a1.5 1.5 0 0 0-3 0v3A2.5 2.5 0 0 0 5 21.5h3a1.5 1.5 0 0 0 0-3m8 0h2.5V16a1.5 1.5 0 0 1 3 0v3a2.5 2.5 0 0 1-2.5 2.5h-3a1.5 1.5 0 0 1 0-3"
 	})], -1)]]);
 }
-var yu = fn({
+var bu = fn({
 	name: "mingcute-fullscreen-fill",
-	render: vu
-}), bu = ["src"], xu = {
+	render: yu
+}), xu = ["src"], Su = {
 	key: 1,
 	class: "pointer-events-none absolute inset-0 flex items-center justify-center"
-}, Su = ["src"], Cu = ["aria-label"], wu = { class: "flex h-14 w-14 items-center justify-center rounded-full bg-black/45 pl-1 text-white transition group-hover/tap:scale-105" }, Tu = { class: "pointer-events-none absolute bottom-2.5 left-2.5 flex items-center" }, Eu = {
+}, Cu = ["src"], wu = ["aria-label"], Tu = { class: "flex h-14 w-14 items-center justify-center rounded-full bg-black/45 pl-1 text-white transition group-hover/tap:scale-105" }, Eu = { class: "pointer-events-none absolute bottom-2.5 left-2.5 flex items-center" }, Du = {
 	key: 0,
 	class: "flex h-6 w-6 items-center justify-center rounded-[10px] bg-black/50"
-}, Du = {
+}, Ou = {
 	key: 1,
 	class: "rounded-[10px] bg-black/50 px-2 py-0.5 text-xs font-semibold text-white"
-}, Ou = {
+}, ku = {
 	key: 3,
 	class: "pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
-}, ku = {
+}, Au = {
 	key: 4,
 	class: "pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 px-4 text-center text-white/60"
-}, Au = { class: "text-xs" }, ju = {
+}, ju = { class: "text-xs" }, Mu = {
 	key: 1,
 	class: "overflow-hidden text-ellipsis whitespace-nowrap"
-}, Mu = ["title"], Nu = ["title"], Pu = ["disabled"], Fu = "flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:bg-white/15 disabled:cursor-default disabled:opacity-40", Iu = "flex h-7 cursor-pointer items-center rounded-md bg-black/40 px-2 text-[11px] font-semibold text-white transition-colors hover:bg-black/60", Lu = /* @__PURE__ */ dr({
+}, Nu = ["title"], Pu = ["title"], Fu = ["disabled"], Iu = "flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:bg-white/15 disabled:cursor-default disabled:opacity-40", Lu = "flex h-7 cursor-pointer items-center rounded-md bg-black/40 px-2 text-[11px] font-semibold text-white transition-colors hover:bg-black/60", Ru = /* @__PURE__ */ dr({
 	__name: "CardPlayer",
 	props: {
 		attributes: {},
@@ -5750,8 +5753,8 @@ var yu = fn({
 		lang: {}
 	},
 	setup(e) {
-		let t = e, n = er(El), r = wl({
-			camera: Bl(X(() => t.attributes), () => n?.value),
+		let t = e, n = er(Dl), r = Tl({
+			camera: Vl(X(() => t.attributes), () => n?.value),
 			mode: t.mode ?? "auto",
 			resolution: t.source ?? "high-resolution",
 			autoStart: !1,
@@ -5873,34 +5876,34 @@ var yu = fn({
 				alt: "",
 				onLoad: de,
 				onError: fe
-			}, null, 40, bu)) : Y("", !0),
-			(!U(x) || !U(k)) && !U(T) ? (K(), q("div", xu, [J("img", {
-				src: U(Tl),
+			}, null, 40, xu)) : Y("", !0),
+			(!U(x) || !U(k)) && !U(T) ? (K(), q("div", Su, [J("img", {
+				src: U(El),
 				class: "h-1/3 max-h-20 w-auto opacity-20",
 				alt: ""
-			}, null, 8, Su)])) : Y("", !0),
+			}, null, 8, Cu)])) : Y("", !0),
 			U(x) ? Y("", !0) : (K(), q("button", {
 				key: 2,
 				type: "button",
 				class: "group/tap absolute inset-0 flex cursor-pointer items-center justify-center bg-transparent transition-colors hover:bg-black/20",
 				"aria-label": `Go live: ${e.title ?? ""}`,
 				onClick: pe
-			}, [J("span", wu, [fa(U(Kl), { class: "h-7 w-7" })])], 8, Cu)),
-			J("div", Tu, [U(D) && !U(E) && !U(x) ? (K(), q("span", Eu, [fa(zl, { size: 14 })])) : U(F) ? (K(), q("span", Du, ze(U(F)), 1)) : Y("", !0)]),
-			U(M) ? (K(), q("div", Ou, [fa(zl, { size: 30 })])) : U(x) && U(i) === "error" ? (K(), q("div", ku, [fa(U(tu), { class: "h-10 w-10" }), J("span", Au, ze(U(d)?.message || "Stream unavailable"), 1)])) : Y("", !0),
+			}, [J("span", Tu, [fa(U(ql), { class: "h-7 w-7" })])], 8, wu)),
+			J("div", Eu, [U(D) && !U(E) && !U(x) ? (K(), q("span", Du, [fa(Bl, { size: 14 })])) : U(F) ? (K(), q("span", Ou, ze(U(F)), 1)) : Y("", !0)]),
+			U(M) ? (K(), q("div", ku, [fa(Bl, { size: 30 })])) : U(x) && U(i) === "error" ? (K(), q("div", Au, [fa(U(nu), { class: "h-10 w-10" }), J("span", ju, ze(U(d)?.message || "Stream unavailable"), 1)])) : Y("", !0),
 			J("div", { class: Me(["pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-black/55 to-transparent px-3 py-2.5 pr-28 text-sm font-medium text-white transition-opacity", U(ie)]) }, [U(N) ? (K(), q("span", {
 				key: 0,
 				class: Me(["inline-flex h-2 w-2 flex-none rounded-full bg-[#f5222d]", { "animate-pulse !bg-[#ff9800]": U(a) }])
-			}, null, 2)) : Y("", !0), e.title ? (K(), q("span", ju, ze(e.title), 1)) : Y("", !0)], 2),
+			}, null, 2)) : Y("", !0), e.title ? (K(), q("span", Mu, ze(e.title), 1)) : Y("", !0)], 2),
 			U(x) && U(A) ? (K(), q("div", {
 				key: 5,
 				class: Me(["absolute right-2 top-2 z-10 flex items-center gap-1 transition-opacity", U(ie)])
 			}, [U(oe).length > 1 ? (K(), q("button", {
 				key: 0,
-				class: Me(Iu),
+				class: Me(Lu),
 				onClick: ge
 			}, ze(m[U(s)] ?? U(s)), 1)) : Y("", !0), J("button", {
-				class: Me(Iu),
+				class: Me(Lu),
 				onClick: _e
 			}, ze(U(P)), 1)], 2)) : Y("", !0),
 			U(x) ? (K(), q("div", {
@@ -5908,90 +5911,90 @@ var yu = fn({
 				class: Me(["absolute inset-x-0 bottom-0 flex items-center gap-0.5 bg-gradient-to-t from-black/70 via-black/40 to-transparent px-2 pb-2 pt-8 text-white transition-opacity", U(ie)])
 			}, [
 				J("button", {
-					class: Me(Fu),
+					class: Me(Iu),
 					title: "Pause",
 					onClick: me
-				}, [fa(U(Ul), { class: "h-[18px] w-[18px]" })]),
+				}, [fa(U(Wl), { class: "h-[18px] w-[18px]" })]),
 				n[2] ||= J("span", { class: "flex-1" }, null, -1),
 				U(te).length && U(k) && U(re) ? (K(), q("button", {
 					key: 0,
-					class: Me([Fu, U(C) && "bg-white/20"]),
+					class: Me([Iu, U(C) && "bg-white/20"]),
 					title: "PTZ",
 					onClick: n[0] ||= (e) => C.value = !U(C)
-				}, [fa(U(pu), { class: "h-[18px] w-[18px]" })], 2)) : Y("", !0),
+				}, [fa(U(mu), { class: "h-[18px] w-[18px]" })], 2)) : Y("", !0),
 				U(p) && U(ne) ? (K(), q("button", {
 					key: 1,
-					class: Me(Fu),
+					class: Me(Iu),
 					title: U(c) ? "Unmute" : "Mute",
 					onClick: ve
-				}, [U(c) ? (K(), sa(U(uu), {
+				}, [U(c) ? (K(), sa(U(du), {
 					key: 0,
 					class: "h-[18px] w-[18px]"
-				})) : (K(), sa(U(su), {
+				})) : (K(), sa(U(cu), {
 					key: 1,
 					class: "h-[18px] w-[18px]"
-				}))], 8, Mu)) : Y("", !0),
+				}))], 8, Nu)) : Y("", !0),
 				U(f) && U(ne) ? (K(), q("button", {
 					key: 2,
-					class: Me([Fu, U(ee) && "bg-white/20"]),
+					class: Me([Iu, U(ee) && "bg-white/20"]),
 					title: U(ee) ? "Stop talking" : "Talk",
 					onClick: be
-				}, [fa(U(iu), { class: "h-[18px] w-[18px]" })], 10, Nu)) : Y("", !0),
+				}, [fa(U(au), { class: "h-[18px] w-[18px]" })], 10, Pu)) : Y("", !0),
 				U(h) && U(j) ? (K(), q("button", {
 					key: 3,
 					disabled: !U(k),
-					class: Me(Fu),
+					class: Me(Iu),
 					onClick: n[1] ||= (e) => U(r).togglePip()
-				}, [U(l) ? (K(), sa(U(Yl), {
+				}, [U(l) ? (K(), sa(U(Xl), {
 					key: 0,
 					class: "h-[18px] w-[18px]"
-				})) : (K(), sa(U(Ql), {
+				})) : (K(), sa(U($l), {
 					key: 1,
 					class: "h-[18px] w-[18px]"
-				}))], 8, Pu)) : Y("", !0),
+				}))], 8, Fu)) : Y("", !0),
 				J("button", {
-					class: Me(Fu),
+					class: Me(Iu),
 					onClick: he
-				}, [U(S) ? (K(), sa(U(gu), {
+				}, [U(S) ? (K(), sa(U(_u), {
 					key: 0,
 					class: "h-[18px] w-[18px]"
-				})) : (K(), sa(U(yu), {
+				})) : (K(), sa(U(bu), {
 					key: 1,
 					class: "h-[18px] w-[18px]"
 				}))])
 			], 2)) : Y("", !0),
-			e.entity && U(te).length && U(k) && U(C) && U(re) ? (K(), sa(Rl, {
+			e.entity && U(te).length && U(k) && U(C) && U(re) ? (K(), sa(zl, {
 				key: 7,
 				entity: e.entity,
 				caps: U(te)
 			}, null, 8, ["entity", "caps"])) : Y("", !0)
 		], 544));
 	}
-}), Ru = {
+}), zu = {
 	viewBox: "0 0 24 24",
 	width: "1.2em",
 	height: "1.2em"
 };
-function zu(e, t) {
-	return K(), q("svg", Ru, [...t[0] ||= [J("path", {
+function Bu(e, t) {
+	return K(), q("svg", zu, [...t[0] ||= [J("path", {
 		fill: "currentColor",
 		d: "M11 15h2v2h-2zm0-8h2v6h-2zm1-5C6.47 2 2 6.5 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 18a8 8 0 0 1-8-8a8 8 0 0 1 8-8a8 8 0 0 1 8 8a8 8 0 0 1-8 8"
 	}, null, -1)]]);
 }
-var Bu = fn({
+var Vu = fn({
 	name: "mdi-alert-circle-outline",
-	render: zu
-}), Vu = { class: "overflow-hidden" }, Hu = {
+	render: Bu
+}), Hu = { class: "overflow-hidden" }, Uu = {
 	key: 1,
 	class: "flex items-center gap-2 p-4 text-[color:var(--error-color,#db4437)]"
-}, Uu = /* @__PURE__ */ dr({
+}, Wu = /* @__PURE__ */ dr({
 	__name: "CameraUiCard",
 	setup(e) {
-		let t = er(El), n = er(Dl), r = X(() => {
+		let t = er(Dl), n = er(Ol), r = X(() => {
 			let e = n.value?.entity;
 			return e ? t.value?.states[e] : void 0;
 		}), i = X(() => r.value?.attributes ?? {}), a = X(() => n.value?.entity ? r.value ? !i.value.camera_name || !i.value.entry_id || !i.value.sources?.length ? "Not a camera.ui camera entity" : "" : `Entity not found: ${n.value.entity}` : "No entity configured"), o = X(() => n.value?.title ?? i.value.friendly_name ?? i.value.camera_name), s = X(() => i.value.entity_picture);
-		return (e, r) => (K(), q("ha-card", Vu, [U(a) ? (K(), q("div", Hu, [fa(U(Bu), { class: "h-5 w-5 shrink-0" }), J("span", null, ze(U(a)), 1)])) : (K(), sa(Lu, {
+		return (e, r) => (K(), q("ha-card", Hu, [U(a) ? (K(), q("div", Uu, [fa(U(Vu), { class: "h-5 w-5 shrink-0" }), J("span", null, ze(U(a)), 1)])) : (K(), sa(Ru, {
 			key: 0,
 			attributes: U(i),
 			entity: U(n)?.entity,
@@ -6014,13 +6017,13 @@ var Bu = fn({
 			"lang"
 		]))]));
 	}
-}), Wu = { class: "overflow-hidden" }, Gu = {
+}), Gu = { class: "overflow-hidden" }, Ku = {
 	key: 0,
 	class: "p-4 text-[color:var(--secondary-text-color,#727272)]"
-}, Ku = /* @__PURE__ */ dr({
+}, qu = /* @__PURE__ */ dr({
 	__name: "GridCard",
 	setup(e) {
-		let t = er(El), n = er(Ol), r = X(() => {
+		let t = er(Dl), n = er(kl), r = X(() => {
 			let e = t?.value;
 			return (n?.value?.cameras ?? []).map((t) => {
 				let n = e?.states[t];
@@ -6038,11 +6041,11 @@ var Bu = fn({
 			let t = r.value.length;
 			return t <= 1 ? 1 : t <= 4 ? 2 : 3;
 		});
-		return (e, a) => (K(), q("ha-card", Wu, [U(r).length ? (K(), q("div", {
+		return (e, a) => (K(), q("ha-card", Gu, [U(r).length ? (K(), q("div", {
 			key: 1,
 			class: "grid gap-px bg-black",
 			style: De({ gridTemplateColumns: `repeat(${U(i)}, minmax(0, 1fr))` })
-		}, [(K(!0), q(Zi, null, Lr(U(r), (e) => (K(), sa(Lu, {
+		}, [(K(!0), q(Zi, null, Lr(U(r), (e) => (K(), sa(Ru, {
 			key: e.entity,
 			attributes: e.attributes,
 			entity: e.entity,
@@ -6059,13 +6062,13 @@ var Bu = fn({
 			"mode",
 			"autostart",
 			"lang"
-		]))), 128))], 4)) : (K(), q("div", Gu, "No cameras configured"))]));
+		]))), 128))], 4)) : (K(), q("div", Ku, "No cameras configured"))]));
 	}
-}), qu = "/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */\n@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-font-weight:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1}::backdrop{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-font-weight:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1}}}@layer theme{:root,:host{--font-sans:var(--paper-font-common-base_-_font-family,Roboto, sans-serif);--font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;--color-black:#000;--color-white:#fff;--spacing:.25rem;--text-xs:.75rem;--text-xs--line-height:calc(1 / .75);--text-sm:.875rem;--text-sm--line-height:calc(1.25 / .875);--font-weight-medium:500;--font-weight-semibold:600;--radius-md:.375rem;--animate-pulse:pulse 2s cubic-bezier(.4, 0, .6, 1) infinite;--aspect-video:16 / 9;--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono);--color-cui-primary:#df2a4c}}@layer base{*,:after,:before{box-sizing:border-box;border:0 solid;margin:0;padding:0}::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", \"Noto Sans\", Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring:where(:not(iframe)){outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab, red, red)){::placeholder{color:color-mix(in oklab, currentcolor 50%, transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}}@layer components;@layer utilities{.pointer-events-auto{pointer-events:auto}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.static{position:static}.inset-0{inset:0}.inset-x-0{inset-inline:0}.top-0{top:0}.top-1\\.5{top:calc(var(--spacing) * 1.5)}.top-2{top:calc(var(--spacing) * 2)}.right-2{right:calc(var(--spacing) * 2)}.right-3{right:calc(var(--spacing) * 3)}.bottom-0{bottom:0}.bottom-1\\.5{bottom:calc(var(--spacing) * 1.5)}.bottom-2\\.5{bottom:calc(var(--spacing) * 2.5)}.bottom-16{bottom:calc(var(--spacing) * 16)}.left-2\\.5{left:calc(var(--spacing) * 2.5)}.left-3{left:calc(var(--spacing) * 3)}.z-10{z-index:10}.z-20{z-index:20}.flex{display:flex}.grid{display:grid}.inline-flex{display:inline-flex}.aspect-video{aspect-ratio:var(--aspect-video)}.h-1\\/3{height:33.3333%}.h-2{height:calc(var(--spacing) * 2)}.h-5{height:calc(var(--spacing) * 5)}.h-6{height:calc(var(--spacing) * 6)}.h-7{height:calc(var(--spacing) * 7)}.h-9{height:calc(var(--spacing) * 9)}.h-10{height:calc(var(--spacing) * 10)}.h-14{height:calc(var(--spacing) * 14)}.h-24{height:calc(var(--spacing) * 24)}.h-28{height:calc(var(--spacing) * 28)}.h-\\[18px\\]{height:18px}.h-full{height:100%}.max-h-20{max-height:calc(var(--spacing) * 20)}.w-2{width:calc(var(--spacing) * 2)}.w-5{width:calc(var(--spacing) * 5)}.w-6{width:calc(var(--spacing) * 6)}.w-7{width:calc(var(--spacing) * 7)}.w-9{width:calc(var(--spacing) * 9)}.w-10{width:calc(var(--spacing) * 10)}.w-14{width:calc(var(--spacing) * 14)}.w-24{width:calc(var(--spacing) * 24)}.w-\\[18px\\]{width:18px}.w-auto{width:auto}.w-full{width:100%}.flex-1{flex:1}.flex-none{flex:none}.shrink-0{flex-shrink:0}.transform{transform:var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)}.animate-pulse{animation:var(--animate-pulse)}.cursor-pointer{cursor:pointer}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.gap-0\\.5{gap:calc(var(--spacing) * .5)}.gap-1{gap:var(--spacing)}.gap-2{gap:calc(var(--spacing) * 2)}.gap-px{gap:1px}.overflow-hidden{overflow:hidden}.rounded-\\[10px\\]{border-radius:10px}.rounded-full{border-radius:3.40282e38px}.rounded-md{border-radius:var(--radius-md)}.\\!bg-\\[\\#ff9800\\]{background-color:#ff9800!important}.bg-\\[\\#f5222d\\]{background-color:#f5222d}.bg-black{background-color:var(--color-black)}.bg-black\\/40{background-color:#0006}@supports (color:color-mix(in lab, red, red)){.bg-black\\/40{background-color:color-mix(in oklab, var(--color-black) 40%, transparent)}}.bg-black\\/45{background-color:#00000073}@supports (color:color-mix(in lab, red, red)){.bg-black\\/45{background-color:color-mix(in oklab, var(--color-black) 45%, transparent)}}.bg-black\\/50{background-color:#00000080}@supports (color:color-mix(in lab, red, red)){.bg-black\\/50{background-color:color-mix(in oklab, var(--color-black) 50%, transparent)}}.bg-transparent{background-color:#0000}.bg-white\\/20{background-color:#fff3}@supports (color:color-mix(in lab, red, red)){.bg-white\\/20{background-color:color-mix(in oklab, var(--color-white) 20%, transparent)}}.bg-gradient-to-b{--tw-gradient-position:to bottom in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.bg-gradient-to-t{--tw-gradient-position:to top in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.from-black\\/55{--tw-gradient-from:#0000008c}@supports (color:color-mix(in lab, red, red)){.from-black\\/55{--tw-gradient-from:color-mix(in oklab, var(--color-black) 55%, transparent)}}.from-black\\/55{--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.from-black\\/70{--tw-gradient-from:#000000b3}@supports (color:color-mix(in lab, red, red)){.from-black\\/70{--tw-gradient-from:color-mix(in oklab, var(--color-black) 70%, transparent)}}.from-black\\/70{--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.via-black\\/40{--tw-gradient-via:#0006}@supports (color:color-mix(in lab, red, red)){.via-black\\/40{--tw-gradient-via:color-mix(in oklab, var(--color-black) 40%, transparent)}}.via-black\\/40{--tw-gradient-via-stops:var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-via) var(--tw-gradient-via-position), var(--tw-gradient-to) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-via-stops)}.to-transparent{--tw-gradient-to:transparent;--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.object-cover{object-fit:cover}.p-4{padding:calc(var(--spacing) * 4)}.px-2{padding-inline:calc(var(--spacing) * 2)}.px-3{padding-inline:calc(var(--spacing) * 3)}.px-4{padding-inline:calc(var(--spacing) * 4)}.py-0\\.5{padding-block:calc(var(--spacing) * .5)}.py-2\\.5{padding-block:calc(var(--spacing) * 2.5)}.pt-8{padding-top:calc(var(--spacing) * 8)}.pr-28{padding-right:calc(var(--spacing) * 28)}.pb-2{padding-bottom:calc(var(--spacing) * 2)}.pl-1{padding-left:var(--spacing)}.text-center{text-align:center}.text-sm{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height))}.text-xs{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height))}.text-\\[11px\\]{font-size:11px}.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}.font-semibold{--tw-font-weight:var(--font-weight-semibold);font-weight:var(--font-weight-semibold)}.text-ellipsis{text-overflow:ellipsis}.whitespace-nowrap{white-space:nowrap}.text-\\[color\\:var\\(--error-color\\,\\#db4437\\)\\]{color:var(--error-color,#db4437)}.text-\\[color\\:var\\(--secondary-text-color\\,\\#727272\\)\\]{color:var(--secondary-text-color,#727272)}.text-white{color:var(--color-white)}.text-white\\/60{color:#fff9}@supports (color:color-mix(in lab, red, red)){.text-white\\/60{color:color-mix(in oklab, var(--color-white) 60%, transparent)}}.opacity-0{opacity:0}.opacity-20{opacity:.2}.opacity-100{opacity:1}.shadow{--tw-shadow:0 1px 3px 0 var(--tw-shadow-color,#0000001a), 0 1px 2px -1px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.transition{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter,display,content-visibility,overlay,pointer-events;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-opacity{transition-property:opacity;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}@media (hover:hover){.group-hover\\/tap\\:scale-105:is(:where(.group\\/tap):hover *){--tw-scale-x:105%;--tw-scale-y:105%;--tw-scale-z:105%;scale:var(--tw-scale-x) var(--tw-scale-y)}.hover\\:bg-black\\/20:hover{background-color:#0003}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-black\\/20:hover{background-color:color-mix(in oklab, var(--color-black) 20%, transparent)}}.hover\\:bg-black\\/60:hover{background-color:#0009}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-black\\/60:hover{background-color:color-mix(in oklab, var(--color-black) 60%, transparent)}}.hover\\:bg-white\\/15:hover{background-color:#ffffff26}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-white\\/15:hover{background-color:color-mix(in oklab, var(--color-white) 15%, transparent)}}}.disabled\\:cursor-default:disabled{cursor:default}.disabled\\:opacity-40:disabled{opacity:.4}}.cui-video{object-fit:cover!important}.cui-video:fullscreen{object-fit:contain!important}@keyframes cui-spin-rotate{to{transform:rotate(360deg)}}@keyframes cui-spin-dash{0%{stroke-dasharray:1 200;stroke-dashoffset:0}50%{stroke-dasharray:89 200;stroke-dashoffset:-35px}to{stroke-dasharray:89 200;stroke-dashoffset:-124px}}.cui-spin{transform-origin:50%;animation:2s linear infinite cui-spin-rotate}.cui-spin-circle{stroke:var(--color-cui-primary,#df2a4c);stroke-linecap:round;animation:1.5s ease-in-out infinite cui-spin-dash}.cui-ptz-pad,.cui-ptz-track{touch-action:none;cursor:grab;background:#0000008c;border-radius:9999px;box-shadow:inset 0 0 0 1px #ffffff1f}.cui-ptz-pad:active,.cui-ptz-track:active{cursor:grabbing}.cui-ptz-knob{pointer-events:none;background:#fff;border-radius:9999px;justify-content:center;align-items:center;width:1.625rem;height:1.625rem;display:flex;position:absolute;top:50%;left:50%;box-shadow:0 2px 6px #00000059}.cui-ptz-knob-icon{color:#00000059;width:.85rem;height:.85rem}.cui-ptz-mark{color:#ffffff8c;pointer-events:none;font-size:.8rem;line-height:1;position:absolute;left:50%;transform:translate(-50%)}@property --tw-rotate-x{syntax:\"*\";inherits:false}@property --tw-rotate-y{syntax:\"*\";inherits:false}@property --tw-rotate-z{syntax:\"*\";inherits:false}@property --tw-skew-x{syntax:\"*\";inherits:false}@property --tw-skew-y{syntax:\"*\";inherits:false}@property --tw-gradient-position{syntax:\"*\";inherits:false}@property --tw-gradient-from{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-via{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-to{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-stops{syntax:\"*\";inherits:false}@property --tw-gradient-via-stops{syntax:\"*\";inherits:false}@property --tw-gradient-from-position{syntax:\"<length-percentage>\";inherits:false;initial-value:0%}@property --tw-gradient-via-position{syntax:\"<length-percentage>\";inherits:false;initial-value:50%}@property --tw-gradient-to-position{syntax:\"<length-percentage>\";inherits:false;initial-value:100%}@property --tw-font-weight{syntax:\"*\";inherits:false}@property --tw-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-shadow-color{syntax:\"*\";inherits:false}@property --tw-shadow-alpha{syntax:\"<percentage>\";inherits:false;initial-value:100%}@property --tw-inset-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-inset-shadow-color{syntax:\"*\";inherits:false}@property --tw-inset-shadow-alpha{syntax:\"<percentage>\";inherits:false;initial-value:100%}@property --tw-ring-color{syntax:\"*\";inherits:false}@property --tw-ring-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-inset-ring-color{syntax:\"*\";inherits:false}@property --tw-inset-ring-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-ring-inset{syntax:\"*\";inherits:false}@property --tw-ring-offset-width{syntax:\"<length>\";inherits:false;initial-value:0}@property --tw-ring-offset-color{syntax:\"*\";inherits:false;initial-value:#fff}@property --tw-ring-offset-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-scale-x{syntax:\"*\";inherits:false;initial-value:1}@property --tw-scale-y{syntax:\"*\";inherits:false;initial-value:1}@property --tw-scale-z{syntax:\"*\";inherits:false;initial-value:1}@keyframes pulse{50%{opacity:.5}}", Ju = {
+}), Ju = "/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */\n@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-font-weight:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1}::backdrop{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-font-weight:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1}}}@layer theme{:root,:host{--font-sans:var(--paper-font-common-base_-_font-family,Roboto, sans-serif);--font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;--color-black:#000;--color-white:#fff;--spacing:.25rem;--text-xs:.75rem;--text-xs--line-height:calc(1 / .75);--text-sm:.875rem;--text-sm--line-height:calc(1.25 / .875);--font-weight-medium:500;--font-weight-semibold:600;--radius-md:.375rem;--animate-pulse:pulse 2s cubic-bezier(.4, 0, .6, 1) infinite;--aspect-video:16 / 9;--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono);--color-cui-primary:#df2a4c}}@layer base{*,:after,:before{box-sizing:border-box;border:0 solid;margin:0;padding:0}::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", \"Noto Sans\", Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring:where(:not(iframe)){outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab, red, red)){::placeholder{color:color-mix(in oklab, currentcolor 50%, transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}}@layer components;@layer utilities{.pointer-events-auto{pointer-events:auto}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.static{position:static}.inset-0{inset:0}.inset-x-0{inset-inline:0}.top-0{top:0}.top-1\\.5{top:calc(var(--spacing) * 1.5)}.top-2{top:calc(var(--spacing) * 2)}.right-2{right:calc(var(--spacing) * 2)}.right-3{right:calc(var(--spacing) * 3)}.bottom-0{bottom:0}.bottom-1\\.5{bottom:calc(var(--spacing) * 1.5)}.bottom-2\\.5{bottom:calc(var(--spacing) * 2.5)}.bottom-16{bottom:calc(var(--spacing) * 16)}.left-2\\.5{left:calc(var(--spacing) * 2.5)}.left-3{left:calc(var(--spacing) * 3)}.z-10{z-index:10}.z-20{z-index:20}.flex{display:flex}.grid{display:grid}.inline-flex{display:inline-flex}.aspect-video{aspect-ratio:var(--aspect-video)}.h-1\\/3{height:33.3333%}.h-2{height:calc(var(--spacing) * 2)}.h-5{height:calc(var(--spacing) * 5)}.h-6{height:calc(var(--spacing) * 6)}.h-7{height:calc(var(--spacing) * 7)}.h-9{height:calc(var(--spacing) * 9)}.h-10{height:calc(var(--spacing) * 10)}.h-14{height:calc(var(--spacing) * 14)}.h-24{height:calc(var(--spacing) * 24)}.h-28{height:calc(var(--spacing) * 28)}.h-\\[18px\\]{height:18px}.h-full{height:100%}.max-h-20{max-height:calc(var(--spacing) * 20)}.w-2{width:calc(var(--spacing) * 2)}.w-5{width:calc(var(--spacing) * 5)}.w-6{width:calc(var(--spacing) * 6)}.w-7{width:calc(var(--spacing) * 7)}.w-9{width:calc(var(--spacing) * 9)}.w-10{width:calc(var(--spacing) * 10)}.w-14{width:calc(var(--spacing) * 14)}.w-24{width:calc(var(--spacing) * 24)}.w-\\[18px\\]{width:18px}.w-auto{width:auto}.w-full{width:100%}.flex-1{flex:1}.flex-none{flex:none}.shrink-0{flex-shrink:0}.transform{transform:var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)}.animate-pulse{animation:var(--animate-pulse)}.cursor-pointer{cursor:pointer}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.gap-0\\.5{gap:calc(var(--spacing) * .5)}.gap-1{gap:var(--spacing)}.gap-2{gap:calc(var(--spacing) * 2)}.gap-px{gap:1px}.overflow-hidden{overflow:hidden}.rounded-\\[10px\\]{border-radius:10px}.rounded-full{border-radius:3.40282e38px}.rounded-md{border-radius:var(--radius-md)}.\\!bg-\\[\\#ff9800\\]{background-color:#ff9800!important}.bg-\\[\\#f5222d\\]{background-color:#f5222d}.bg-black{background-color:var(--color-black)}.bg-black\\/40{background-color:#0006}@supports (color:color-mix(in lab, red, red)){.bg-black\\/40{background-color:color-mix(in oklab, var(--color-black) 40%, transparent)}}.bg-black\\/45{background-color:#00000073}@supports (color:color-mix(in lab, red, red)){.bg-black\\/45{background-color:color-mix(in oklab, var(--color-black) 45%, transparent)}}.bg-black\\/50{background-color:#00000080}@supports (color:color-mix(in lab, red, red)){.bg-black\\/50{background-color:color-mix(in oklab, var(--color-black) 50%, transparent)}}.bg-transparent{background-color:#0000}.bg-white\\/20{background-color:#fff3}@supports (color:color-mix(in lab, red, red)){.bg-white\\/20{background-color:color-mix(in oklab, var(--color-white) 20%, transparent)}}.bg-gradient-to-b{--tw-gradient-position:to bottom in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.bg-gradient-to-t{--tw-gradient-position:to top in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.from-black\\/55{--tw-gradient-from:#0000008c}@supports (color:color-mix(in lab, red, red)){.from-black\\/55{--tw-gradient-from:color-mix(in oklab, var(--color-black) 55%, transparent)}}.from-black\\/55{--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.from-black\\/70{--tw-gradient-from:#000000b3}@supports (color:color-mix(in lab, red, red)){.from-black\\/70{--tw-gradient-from:color-mix(in oklab, var(--color-black) 70%, transparent)}}.from-black\\/70{--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.via-black\\/40{--tw-gradient-via:#0006}@supports (color:color-mix(in lab, red, red)){.via-black\\/40{--tw-gradient-via:color-mix(in oklab, var(--color-black) 40%, transparent)}}.via-black\\/40{--tw-gradient-via-stops:var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-via) var(--tw-gradient-via-position), var(--tw-gradient-to) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-via-stops)}.to-transparent{--tw-gradient-to:transparent;--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.object-cover{object-fit:cover}.p-4{padding:calc(var(--spacing) * 4)}.px-2{padding-inline:calc(var(--spacing) * 2)}.px-3{padding-inline:calc(var(--spacing) * 3)}.px-4{padding-inline:calc(var(--spacing) * 4)}.py-0\\.5{padding-block:calc(var(--spacing) * .5)}.py-2\\.5{padding-block:calc(var(--spacing) * 2.5)}.pt-8{padding-top:calc(var(--spacing) * 8)}.pr-28{padding-right:calc(var(--spacing) * 28)}.pb-2{padding-bottom:calc(var(--spacing) * 2)}.pl-1{padding-left:var(--spacing)}.text-center{text-align:center}.text-sm{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height))}.text-xs{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height))}.text-\\[11px\\]{font-size:11px}.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}.font-semibold{--tw-font-weight:var(--font-weight-semibold);font-weight:var(--font-weight-semibold)}.text-ellipsis{text-overflow:ellipsis}.whitespace-nowrap{white-space:nowrap}.text-\\[color\\:var\\(--error-color\\,\\#db4437\\)\\]{color:var(--error-color,#db4437)}.text-\\[color\\:var\\(--secondary-text-color\\,\\#727272\\)\\]{color:var(--secondary-text-color,#727272)}.text-white{color:var(--color-white)}.text-white\\/60{color:#fff9}@supports (color:color-mix(in lab, red, red)){.text-white\\/60{color:color-mix(in oklab, var(--color-white) 60%, transparent)}}.opacity-0{opacity:0}.opacity-20{opacity:.2}.opacity-100{opacity:1}.shadow{--tw-shadow:0 1px 3px 0 var(--tw-shadow-color,#0000001a), 0 1px 2px -1px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.transition{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter,display,content-visibility,overlay,pointer-events;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-opacity{transition-property:opacity;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}@media (hover:hover){.group-hover\\/tap\\:scale-105:is(:where(.group\\/tap):hover *){--tw-scale-x:105%;--tw-scale-y:105%;--tw-scale-z:105%;scale:var(--tw-scale-x) var(--tw-scale-y)}.hover\\:bg-black\\/20:hover{background-color:#0003}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-black\\/20:hover{background-color:color-mix(in oklab, var(--color-black) 20%, transparent)}}.hover\\:bg-black\\/60:hover{background-color:#0009}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-black\\/60:hover{background-color:color-mix(in oklab, var(--color-black) 60%, transparent)}}.hover\\:bg-white\\/15:hover{background-color:#ffffff26}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-white\\/15:hover{background-color:color-mix(in oklab, var(--color-white) 15%, transparent)}}}.disabled\\:cursor-default:disabled{cursor:default}.disabled\\:opacity-40:disabled{opacity:.4}}.cui-video{object-fit:cover!important}.cui-video:fullscreen{object-fit:contain!important}@keyframes cui-spin-rotate{to{transform:rotate(360deg)}}@keyframes cui-spin-dash{0%{stroke-dasharray:1 200;stroke-dashoffset:0}50%{stroke-dasharray:89 200;stroke-dashoffset:-35px}to{stroke-dasharray:89 200;stroke-dashoffset:-124px}}.cui-spin{transform-origin:50%;animation:2s linear infinite cui-spin-rotate}.cui-spin-circle{stroke:var(--color-cui-primary,#df2a4c);stroke-linecap:round;animation:1.5s ease-in-out infinite cui-spin-dash}.cui-ptz-pad,.cui-ptz-track{touch-action:none;cursor:grab;background:#0000008c;border-radius:9999px;box-shadow:inset 0 0 0 1px #ffffff1f}.cui-ptz-pad:active,.cui-ptz-track:active{cursor:grabbing}.cui-ptz-knob{pointer-events:none;background:#fff;border-radius:9999px;justify-content:center;align-items:center;width:1.625rem;height:1.625rem;display:flex;position:absolute;top:50%;left:50%;box-shadow:0 2px 6px #00000059}.cui-ptz-knob-icon{color:#00000059;width:.85rem;height:.85rem}.cui-ptz-mark{color:#ffffff8c;pointer-events:none;font-size:.8rem;line-height:1;position:absolute;left:50%;transform:translate(-50%)}@property --tw-rotate-x{syntax:\"*\";inherits:false}@property --tw-rotate-y{syntax:\"*\";inherits:false}@property --tw-rotate-z{syntax:\"*\";inherits:false}@property --tw-skew-x{syntax:\"*\";inherits:false}@property --tw-skew-y{syntax:\"*\";inherits:false}@property --tw-gradient-position{syntax:\"*\";inherits:false}@property --tw-gradient-from{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-via{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-to{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-stops{syntax:\"*\";inherits:false}@property --tw-gradient-via-stops{syntax:\"*\";inherits:false}@property --tw-gradient-from-position{syntax:\"<length-percentage>\";inherits:false;initial-value:0%}@property --tw-gradient-via-position{syntax:\"<length-percentage>\";inherits:false;initial-value:50%}@property --tw-gradient-to-position{syntax:\"<length-percentage>\";inherits:false;initial-value:100%}@property --tw-font-weight{syntax:\"*\";inherits:false}@property --tw-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-shadow-color{syntax:\"*\";inherits:false}@property --tw-shadow-alpha{syntax:\"<percentage>\";inherits:false;initial-value:100%}@property --tw-inset-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-inset-shadow-color{syntax:\"*\";inherits:false}@property --tw-inset-shadow-alpha{syntax:\"<percentage>\";inherits:false;initial-value:100%}@property --tw-ring-color{syntax:\"*\";inherits:false}@property --tw-ring-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-inset-ring-color{syntax:\"*\";inherits:false}@property --tw-inset-ring-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-ring-inset{syntax:\"*\";inherits:false}@property --tw-ring-offset-width{syntax:\"<length>\";inherits:false;initial-value:0}@property --tw-ring-offset-color{syntax:\"*\";inherits:false;initial-value:#fff}@property --tw-ring-offset-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-scale-x{syntax:\"*\";inherits:false;initial-value:1}@property --tw-scale-y{syntax:\"*\";inherits:false;initial-value:1}@property --tw-scale-z{syntax:\"*\";inherits:false;initial-value:1}@keyframes pulse{50%{opacity:.5}}", Yu = {
 	"/api/go2rtc": "go2rtc",
 	"/api/proxy": "rpc"
-}, Yu = 4e3, Xu = 4002;
-function Zu(e) {
+}, Xu = 4e3, Zu = 4002;
+function Qu(e) {
 	let t = {
 		id: "ha-ws",
 		kind: "per-resource",
@@ -6080,7 +6083,7 @@ function Zu(e) {
 	}
 	async function a(t) {
 		try {
-			let n = e.getHass(), r = e.getEntryId(), i = Ju[t.spec.path];
+			let n = e.getHass(), r = e.getEntryId(), i = Yu[t.spec.path];
 			if (!n || !r || !i) throw Error(`cannot resolve proxy target for ${t.spec.path}`);
 			let a = new URLSearchParams();
 			for (let [e, n] of Object.entries(t.spec.query ?? {})) n != null && n !== "" && a.set(e, n);
@@ -6106,7 +6109,7 @@ function Zu(e) {
 				});
 			};
 		} catch (e) {
-			t.disposed || i(t, Yu, e instanceof Error ? e.message : String(e));
+			t.disposed || i(t, Xu, e instanceof Error ? e.message : String(e));
 		}
 	}
 	function o(e, t, n) {
@@ -6163,7 +6166,7 @@ function Zu(e) {
 				if (t.ws = null, t.url = null, e) {
 					e.onclose = null, e.onmessage = null, e.onerror = null, e.onopen = null;
 					try {
-						e.close(Xu, "disposed");
+						e.close(Zu, "disposed");
 					} catch {}
 				}
 				t.listeners.open.clear(), t.listeners.close.clear(), t.listeners.message.clear(), t.listeners.error.clear(), n.delete(t);
@@ -6186,7 +6189,7 @@ function Zu(e) {
 		},
 		async dispose() {
 			r = !0;
-			for (let e of [...n]) e.disposed = !0, o(e, Xu, "disposed");
+			for (let e of [...n]) e.disposed = !0, o(e, Zu, "disposed");
 			n.clear();
 		},
 		open: s
@@ -6194,8 +6197,8 @@ function Zu(e) {
 }
 //#endregion
 //#region src/context.ts
-function Qu(e) {
-	let t = Zu(e), n = null, r = X(() => {
+function $u(e) {
+	let t = Qu(e), n = null, r = X(() => {
 		let t = e.getHass();
 		return !t || !e.getEntryId() ? null : (n ??= {
 			endpoint: {
@@ -6220,37 +6223,37 @@ function Qu(e) {
 }
 //#endregion
 //#region src/main.ts
-function $u(e, t) {
+function ed(e, t) {
 	for (let n of t) {
 		let t = e.value?.states[n]?.attributes?.entry_id;
 		if (t) return t;
 	}
 }
-function ed(e, t) {
+function td(e, t) {
 	if (t.split(".")[0] !== "camera") return !1;
 	let n = e?.states[t]?.attributes;
 	return !!(n?.entry_id && Array.isArray(n.sources));
 }
-function td(e) {
-	if (e) return Object.keys(e.states).find((t) => ed(e, t));
+function nd(e) {
+	if (e) return Object.keys(e.states).find((t) => td(e, t));
 }
-function nd(e, t, n, r, i, a) {
+function rd(e, t, n, r, i, a) {
 	let o = e.shadowRoot ?? e.attachShadow({ mode: "open" });
 	o.innerHTML = "";
 	let s = document.createElement("style");
-	s.textContent = qu;
+	s.textContent = Ju;
 	let c = document.createElement("div");
 	o.append(s, c);
-	let l = Qu({
+	let l = $u({
 		getHass: () => n.value,
 		getEntryId: a
 	}), u = No(t);
-	return u.provide(El, n), u.provide(r, i), u.use(wc(l)), u.mount(c), u;
+	return u.provide(Dl, n), u.provide(r, i), u.use(Tc(l)), u.mount(c), u;
 }
-function rd(e, t) {
+function id(e, t) {
 	t.unmount(), e.shadowRoot && (e.shadowRoot.innerHTML = "");
 }
-var id = class extends HTMLElement {
+var ad = class extends HTMLElement {
 	app = null;
 	hassRef = /* @__PURE__ */ H(void 0);
 	configRef = /* @__PURE__ */ H(void 0);
@@ -6275,7 +6278,7 @@ var id = class extends HTMLElement {
 		};
 	}
 	static getStubConfig(e) {
-		return { entity: td(e) ?? "" };
+		return { entity: nd(e) ?? "" };
 	}
 	static getConfigForm() {
 		return { schema: [
@@ -6306,14 +6309,14 @@ var id = class extends HTMLElement {
 		] };
 	}
 	connectedCallback() {
-		this.app ??= nd(this, Uu, this.hassRef, Dl, this.configRef, () => $u(this.hassRef, this.configRef.value?.entity ? [this.configRef.value.entity] : []));
+		this.app ??= rd(this, Wu, this.hassRef, Ol, this.configRef, () => ed(this.hassRef, this.configRef.value?.entity ? [this.configRef.value.entity] : []));
 	}
 	disconnectedCallback() {
 		queueMicrotask(() => {
-			!this.isConnected && this.app && (rd(this, this.app), this.app = null);
+			!this.isConnected && this.app && (id(this, this.app), this.app = null);
 		});
 	}
-}, ad = class extends HTMLElement {
+}, od = class extends HTMLElement {
 	app = null;
 	hassRef = /* @__PURE__ */ H(void 0);
 	configRef = /* @__PURE__ */ H(void 0);
@@ -6338,7 +6341,7 @@ var id = class extends HTMLElement {
 		};
 	}
 	static getStubConfig(e) {
-		let t = td(e);
+		let t = nd(e);
 		return { cameras: t ? [t] : [] };
 	}
 	static getConfigForm() {
@@ -6359,21 +6362,21 @@ var id = class extends HTMLElement {
 		}] };
 	}
 	connectedCallback() {
-		this.app ??= nd(this, Ku, this.hassRef, Ol, this.configRef, () => $u(this.hassRef, this.configRef.value?.cameras ?? []));
+		this.app ??= rd(this, qu, this.hassRef, kl, this.configRef, () => ed(this.hassRef, this.configRef.value?.cameras ?? []));
 	}
 	disconnectedCallback() {
 		queueMicrotask(() => {
-			!this.isConnected && this.app && (rd(this, this.app), this.app = null);
+			!this.isConnected && this.app && (id(this, this.app), this.app = null);
 		});
 	}
 };
-customElements.get("cameraui-card") || customElements.define("cameraui-card", id), customElements.get("cameraui-grid-card") || customElements.define("cameraui-grid-card", ad), window.customCards = window.customCards ?? [], window.customCards.push({
+customElements.get("cameraui-card") || customElements.define("cameraui-card", ad), customElements.get("cameraui-grid-card") || customElements.define("cameraui-grid-card", od), window.customCards = window.customCards ?? [], window.customCards.push({
 	type: "cameraui-card",
 	name: "camera.ui Card",
 	description: "Live view for camera.ui cameras with WebRTC/MSE, source switching and H.265 support.",
 	documentationURL: "https://github.com/cameraui/homeassistant-integration",
 	preview: !0,
-	getEntitySuggestion: (e, t) => ed(e, t) ? { config: {
+	getEntitySuggestion: (e, t) => td(e, t) ? { config: {
 		type: "custom:cameraui-card",
 		entity: t
 	} } : null
