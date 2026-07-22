@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 from aiohttp import hdrs, web
@@ -154,6 +154,57 @@ class CameraUiSnapshotView(HomeAssistantView):
         return web.Response(
             body=body, content_type="image/jpeg", headers={"Cache-Control": "no-store"}
         )
+
+
+def _probe_flags(probe: dict[str, Any]) -> dict[str, bool]:
+    # go2rtc media lines look like "audio, recvonly, OPUS/48000"; recvonly audio is the backchannel
+    medias = [
+        media.lower()
+        for producer in probe.get("producers") or []
+        for media in producer.get("medias") or []
+    ]
+    return {
+        "has_backchannel": any(m.startswith("audio") and "recvonly" in m for m in medias),
+        "has_audio": any(m.startswith("audio") and "sendonly" in m for m in medias),
+        "has_video": any(m.startswith("video") and "sendonly" in m for m in medias),
+    }
+
+
+class CameraUiProbeView(HomeAssistantView):
+    name = "api:cameraui:probe"
+    url = "/api/cameraui/probe/{entry_id}/{camera_name}/{source_name}"
+    requires_auth = True
+
+    async def get(
+        self, request: web.Request, entry_id: str, camera_name: str, source_name: str
+    ) -> web.Response:
+        hass = request.app[KEY_HASS]
+
+        entry = _get_loaded_entry(hass, entry_id)
+        if not entry:
+            raise web.HTTPNotFound
+
+        upstream_url = URL.build(
+            scheme="https",
+            host=entry.data[CONF_HOST],
+            port=entry.data[CONF_PORT],
+            path=f"/api/cameras/{camera_name}/probe/{source_name}",
+            query={"microphone": "true"},
+        )
+        session = async_get_clientsession(hass, verify_ssl=False)
+        try:
+            async with session.get(
+                upstream_url,
+                headers={"Authorization": f"Bearer {entry.data[CONF_TOKEN]}"},
+            ) as upstream:
+                if upstream.status != 200:
+                    raise web.HTTPBadGateway
+                data = await upstream.json()
+        except aiohttp.ClientError as err:
+            _LOGGER.debug("Probe for %s failed: %s", camera_name, err)
+            raise web.HTTPBadGateway from err
+
+        return web.json_response(_probe_flags(data.get("probe", {})))
 
 
 class CameraUiProxyView(HomeAssistantView):

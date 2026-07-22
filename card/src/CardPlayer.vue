@@ -1,5 +1,11 @@
 <template>
-  <div ref="wrapperEl" class="cui-player group relative aspect-video w-full overflow-hidden bg-black">
+  <div
+    ref="wrapperEl"
+    class="cui-player group relative aspect-video w-full overflow-hidden bg-black"
+    @pointermove="revealControls"
+    @pointerdown="revealControls"
+    @pointerleave="onPointerLeave"
+  >
     <div ref="containerEl" class="absolute inset-0" />
 
     <img
@@ -23,7 +29,7 @@
       @click="goLive"
     >
       <span
-        class="flex h-14 w-14 scale-90 items-center justify-center rounded-full bg-black/45 pl-1 text-white opacity-0 transition group-hover/tap:scale-100 group-hover/tap:opacity-100"
+        class="flex h-14 w-14 items-center justify-center rounded-full bg-black/45 pl-1 text-white transition group-hover/tap:scale-105"
       >
         <IconPlay class="h-7 w-7" />
       </span>
@@ -48,27 +54,29 @@
     </div>
 
     <div
-      class="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-black/55 to-transparent px-3 py-2.5 pr-28 text-sm font-medium text-white opacity-0 transition-opacity group-hover:opacity-100"
+      class="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-black/55 to-transparent px-3 py-2.5 pr-28 text-sm font-medium text-white transition-opacity"
+      :class="controlsClass"
     >
       <span v-if="showLiveDot" class="inline-flex h-2 w-2 flex-none rounded-full bg-[#f5222d]" :class="{ 'animate-pulse !bg-[#ff9800]': isReconnecting }" />
       <span v-if="title" class="overflow-hidden text-ellipsis whitespace-nowrap">{{ title }}</span>
     </div>
 
-    <div v-if="live && showPills" class="absolute right-2 top-2 z-10 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+    <div v-if="live && showPills" class="absolute right-2 top-2 z-10 flex items-center gap-1 transition-opacity" :class="controlsClass">
       <button v-if="availableRoles.length > 1" :class="pillBtn" @click="cycleResolution">{{ RESOLUTION_LABELS[activeResolution] ?? activeResolution }}</button>
       <button :class="pillBtn" @click="cycleMode">{{ modeLabel }}</button>
     </div>
 
     <div
       v-if="live"
-      class="absolute inset-x-0 bottom-0 flex items-center gap-0.5 bg-gradient-to-t from-black/70 via-black/40 to-transparent px-2 pb-2 pt-8 text-white opacity-0 transition-opacity group-hover:opacity-100"
+      class="absolute inset-x-0 bottom-0 flex items-center gap-0.5 bg-gradient-to-t from-black/70 via-black/40 to-transparent px-2 pb-2 pt-8 text-white transition-opacity"
+      :class="controlsClass"
     >
       <button :class="iconBtn" title="Pause" @click="togglePlay"><IconPause class="h-[18px] w-[18px]" /></button>
       <span class="flex-1" />
       <button v-if="ptzCaps.length && hasVideo && ptzRoom" :class="[iconBtn, showPtz && 'bg-white/20']" title="PTZ" @click="showPtz = !showPtz">
         <IconPtz class="h-[18px] w-[18px]" />
       </button>
-      <button v-if="showMute" :class="iconBtn" :title="muted ? 'Unmute' : 'Mute'" @click="toggleMute">
+      <button v-if="hasAudio && showMute" :class="iconBtn" :title="muted ? 'Unmute' : 'Mute'" @click="toggleMute">
         <IconMute v-if="muted" class="h-[18px] w-[18px]" />
         <IconVolume v-else class="h-[18px] w-[18px]" />
       </button>
@@ -128,7 +136,10 @@ const props = defineProps<{
 
 const hass = inject(HASS_KEY);
 
-const device = createHaCameraDevice(computed(() => props.attributes));
+const device = createHaCameraDevice(
+  computed(() => props.attributes),
+  () => hass?.value,
+);
 const stream = useCameraStream({
   camera: device,
   mode: props.mode ?? 'auto',
@@ -137,7 +148,8 @@ const stream = useCameraStream({
   videoClass: 'cui-video',
   isolated: true,
 });
-const { status, isReconnecting, activeMode, activeResolution, muted, isPip, nativeWidth, error, hasIntercom } = stream;
+
+const { status, isReconnecting, activeMode, activeResolution, muted, isPip, nativeWidth, error, hasIntercom, hasAudio } = stream;
 
 const RESOLUTION_LABELS: Record<string, string> = {
   'high-resolution': 'HD',
@@ -164,6 +176,7 @@ const snapshotSrc = ref(props.poster);
 const snapshotAt = ref(0);
 const snapshotLoading = ref(false);
 const micActive = ref(false);
+const controlsVisible = ref(false);
 
 const ptzCaps = computed(() => props.attributes.ptz ?? []);
 const hasVideo = computed(() => nativeWidth.value > 0);
@@ -173,6 +186,7 @@ const showMute = computed(() => cardWidth.value === 0 || cardWidth.value >= 200)
 const ptzRoom = computed(() => cardWidth.value >= 340);
 const showSpinner = computed(() => live.value && !hasVideo.value && status.value !== 'error');
 const showLiveDot = computed(() => live.value && hasVideo.value);
+const controlsClass = computed(() => (controlsVisible.value ? 'opacity-100' : 'opacity-0 pointer-events-none'));
 const snapshotIntervalMs = computed(() => Math.max(2, props.snapshotInterval ?? 10) * 1000);
 
 const availableRoles = computed(() => {
@@ -212,6 +226,23 @@ async function refreshSnapshot(): Promise<void> {
 }
 
 const snapshotLoop = useIntervalFn(refreshSnapshot, snapshotIntervalMs, { immediate: false });
+
+// touch has no hover, so controls are a reactive layer: any pointer activity reveals them, a timer hides them
+const { start: armHideControls, stop: cancelHideControls } = useTimeoutFn(() => (controlsVisible.value = false), 3000, {
+  immediate: false,
+});
+
+function revealControls(): void {
+  controlsVisible.value = true;
+  armHideControls();
+}
+
+function onPointerLeave(event: PointerEvent): void {
+  if (event.pointerType === 'mouse') {
+    cancelHideControls();
+    controlsVisible.value = false;
+  }
+}
 
 function onSnapshotLoad(): void {
   snapshotAt.value = Date.now();

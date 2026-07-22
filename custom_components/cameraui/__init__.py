@@ -19,7 +19,7 @@ from .ptz import async_setup_ptz_service
 from .resources import async_register_card
 from .sensor_manager import CameraUiSensorManager
 from .sensor_map import SENSOR_PLATFORMS
-from .views import CameraUiProxyView, CameraUiSnapshotView, CameraUiWsProxyView
+from .views import CameraUiProbeView, CameraUiProxyView, CameraUiSnapshotView, CameraUiWsProxyView
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,6 +42,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: CameraUiConfigEntry) -> 
         hass.data[DATA_GLOBAL_SETUP] = True
         hass.http.register_view(CameraUiWsProxyView)
         hass.http.register_view(CameraUiSnapshotView)
+        hass.http.register_view(CameraUiProbeView)
         hass.http.register_view(CameraUiProxyView)
         async_setup_ptz_service(hass)
         await async_register_card(hass)
