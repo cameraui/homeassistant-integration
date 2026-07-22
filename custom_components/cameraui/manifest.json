@@ -17,7 +17,7 @@
   "requirements": [
     "python-socketio==5.16.3"
   ],
-  "version": "0.2.5",
+  "version": "0.2.6",
   "zeroconf": [
     "_camera-ui._tcp.local."
   ]
