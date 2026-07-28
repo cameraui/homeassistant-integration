@@ -1,22 +1,12 @@
 <template>
   <div class="pointer-events-none absolute inset-0 z-10">
-    <div
-      v-if="hasZoom"
-      ref="zoomEl"
-      class="cui-ptz-track pointer-events-auto absolute bottom-16 left-3 h-28 w-10"
-      @pointerdown="startZoom"
-    >
+    <div v-if="hasZoom" ref="zoomEl" class="cui-ptz-track pointer-events-auto absolute bottom-16 left-3 h-28 w-10" @pointerdown="startZoom">
       <span class="cui-ptz-mark top-1.5">+</span>
       <span class="cui-ptz-mark bottom-1.5">&minus;</span>
       <div class="cui-ptz-knob" :style="{ transform: `translate(-50%, calc(-50% + ${zoomKnob}px))` }" />
     </div>
 
-    <div
-      v-if="hasPanTilt"
-      ref="padEl"
-      class="cui-ptz-pad pointer-events-auto absolute bottom-16 right-3 h-24 w-24"
-      @pointerdown="startPad"
-    >
+    <div v-if="hasPanTilt" ref="padEl" class="cui-ptz-pad pointer-events-auto absolute bottom-16 right-3 h-24 w-24" @pointerdown="startPad">
       <div class="cui-ptz-knob" :style="{ transform: `translate(calc(-50% + ${padKnob.x}px), calc(-50% + ${padKnob.y}px))` }">
         <IconHome v-if="hasHome" class="cui-ptz-knob-icon" />
       </div>
@@ -67,8 +57,7 @@ function callPtz(data: Record<string, unknown>): void {
 
 function sendVelocity(pan: number, tilt: number, zoom: number): void {
   const now = Date.now();
-  const changed =
-    Math.abs(pan - lastVel.pan) > CHANGE_THRESHOLD || Math.abs(tilt - lastVel.tilt) > CHANGE_THRESHOLD || Math.abs(zoom - lastVel.zoom) > CHANGE_THRESHOLD;
+  const changed = Math.abs(pan - lastVel.pan) > CHANGE_THRESHOLD || Math.abs(tilt - lastVel.tilt) > CHANGE_THRESHOLD || Math.abs(zoom - lastVel.zoom) > CHANGE_THRESHOLD;
   if (!changed || now - lastSent < THROTTLE_MS) return;
   lastSent = now;
   lastVel = { pan, tilt, zoom };

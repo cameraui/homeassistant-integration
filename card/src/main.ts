@@ -107,13 +107,8 @@ class CameraUiCardElement extends HTMLElement {
   }
 
   public connectedCallback(): void {
-    this.app ??= mountCardApp(
-      this,
-      CameraUiCard,
-      this.hassRef,
-      CONFIG_KEY as InjectionKey<unknown>,
-      this.configRef as ShallowRef<unknown>,
-      () => entryIdFrom(this.hassRef, this.configRef.value?.entity ? [this.configRef.value.entity] : []),
+    this.app ??= mountCardApp(this, CameraUiCard, this.hassRef, CONFIG_KEY as InjectionKey<unknown>, this.configRef as ShallowRef<unknown>, () =>
+      entryIdFrom(this.hassRef, this.configRef.value?.entity ? [this.configRef.value.entity] : []),
     );
   }
 
@@ -170,13 +165,8 @@ class CameraUiGridCardElement extends HTMLElement {
   }
 
   public connectedCallback(): void {
-    this.app ??= mountCardApp(
-      this,
-      GridCard,
-      this.hassRef,
-      GRID_CONFIG_KEY as InjectionKey<unknown>,
-      this.configRef as ShallowRef<unknown>,
-      () => entryIdFrom(this.hassRef, this.configRef.value?.cameras ?? []),
+    this.app ??= mountCardApp(this, GridCard, this.hassRef, GRID_CONFIG_KEY as InjectionKey<unknown>, this.configRef as ShallowRef<unknown>, () =>
+      entryIdFrom(this.hassRef, this.configRef.value?.cameras ?? []),
     );
   }
 

@@ -45,9 +45,7 @@ class CameraUiWsProxyView(HomeAssistantView):
     url = "/api/cameraui/ws/{entry_id}/{target}"
     requires_auth = True
 
-    async def get(
-        self, request: web.Request, entry_id: str, target: str
-    ) -> web.WebSocketResponse:
+    async def get(self, request: web.Request, entry_id: str, target: str) -> web.WebSocketResponse:
         hass = request.app[KEY_HASS]
 
         upstream_path = WS_TARGETS.get(target)
@@ -63,11 +61,7 @@ class CameraUiWsProxyView(HomeAssistantView):
             raise web.HTTPNotFound
 
         # camera.ui authenticates WS upgrades via the token query param
-        query = {
-            key: value
-            for key, value in request.query.items()
-            if key != SIGN_QUERY_PARAM
-        }
+        query = {key: value for key, value in request.query.items() if key != SIGN_QUERY_PARAM}
         query["token"] = entry.data[CONF_TOKEN]
         upstream_url = URL.build(
             scheme="wss",
@@ -79,10 +73,7 @@ class CameraUiWsProxyView(HomeAssistantView):
 
         protocols: list[str] = []
         if hdrs.SEC_WEBSOCKET_PROTOCOL in request.headers:
-            protocols = [
-                proto.strip()
-                for proto in request.headers[hdrs.SEC_WEBSOCKET_PROTOCOL].split(",")
-            ]
+            protocols = [proto.strip() for proto in request.headers[hdrs.SEC_WEBSOCKET_PROTOCOL].split(",")]
 
         ws_server = web.WebSocketResponse(
             protocols=protocols,
@@ -109,9 +100,7 @@ class CameraUiWsProxyView(HomeAssistantView):
                     return_when=asyncio.FIRST_COMPLETED,
                 )
         except aiohttp.ClientError as err:
-            _LOGGER.warning(
-                "Upstream WebSocket connection to %s failed: %s", target, err
-            )
+            _LOGGER.warning("Upstream WebSocket connection to %s failed: %s", target, err)
             await ws_server.close(code=aiohttp.WSCloseCode.INTERNAL_ERROR)
 
         return ws_server
@@ -122,9 +111,7 @@ class CameraUiSnapshotView(HomeAssistantView):
     url = "/api/cameraui/snapshot/{entry_id}/{camera_name}"
     requires_auth = True
 
-    async def get(
-        self, request: web.Request, entry_id: str, camera_name: str
-    ) -> web.Response:
+    async def get(self, request: web.Request, entry_id: str, camera_name: str) -> web.Response:
         hass = request.app[KEY_HASS]
 
         entry = _get_loaded_entry(hass, entry_id)
@@ -151,17 +138,13 @@ class CameraUiSnapshotView(HomeAssistantView):
             _LOGGER.debug("Snapshot fetch for %s failed: %s", camera_name, err)
             raise web.HTTPBadGateway from err
 
-        return web.Response(
-            body=body, content_type="image/jpeg", headers={"Cache-Control": "no-store"}
-        )
+        return web.Response(body=body, content_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
 def _probe_flags(probe: dict[str, Any]) -> dict[str, bool]:
     # go2rtc media lines look like "audio, recvonly, OPUS/48000"; recvonly audio is the backchannel
     medias = [
-        media.lower()
-        for producer in probe.get("producers") or []
-        for media in producer.get("medias") or []
+        media.lower() for producer in probe.get("producers") or [] for media in producer.get("medias") or []
     ]
     return {
         "has_backchannel": any(m.startswith("audio") and "recvonly" in m for m in medias),
@@ -212,9 +195,7 @@ class CameraUiProxyView(HomeAssistantView):
     url = "/api/cameraui/proxy/{secret}/{path:.*}"
     requires_auth = False
 
-    async def _handle(
-        self, request: web.Request, secret: str, path: str
-    ) -> web.StreamResponse:
+    async def _handle(self, request: web.Request, secret: str, path: str) -> web.StreamResponse:
         hass = request.app[KEY_HASS]
 
         entry = _get_entry_by_proxy_secret(hass, secret)
@@ -235,11 +216,7 @@ class CameraUiProxyView(HomeAssistantView):
         self, request: web.Request, entry: ConfigEntry, secret: str, path: str
     ) -> web.StreamResponse:
         hass = request.app[KEY_HASS]
-        query = {
-            key: value
-            for key, value in request.query.items()
-            if key != SIGN_QUERY_PARAM
-        }
+        query = {key: value for key, value in request.query.items() if key != SIGN_QUERY_PARAM}
         upstream_url = URL.build(
             scheme="https",
             host=entry.data[CONF_HOST],
@@ -248,11 +225,7 @@ class CameraUiProxyView(HomeAssistantView):
             query=query,
         )
 
-        headers = {
-            name: value
-            for name, value in request.headers.items()
-            if name not in HOP_BY_HOP
-        }
+        headers = {name: value for name, value in request.headers.items() if name not in HOP_BY_HOP}
         headers[hdrs.AUTHORIZATION] = f"Bearer {entry.data[CONF_TOKEN]}"
         headers["X-Cui-Base"] = f"{PROXY_PREFIX}/{secret}/"
         headers["X-Cui-Embed"] = "homeassistant"
@@ -265,6 +238,7 @@ class CameraUiProxyView(HomeAssistantView):
                 headers=headers,
                 data=request.content if request.body_exists else None,
                 allow_redirects=False,
+                skip_auto_headers=(hdrs.CONTENT_TYPE,),
             ) as upstream:
                 response = web.StreamResponse(status=upstream.status)
                 for name, value in upstream.headers.items():
@@ -281,15 +255,9 @@ class CameraUiProxyView(HomeAssistantView):
             _LOGGER.debug("Proxy request to %s failed: %s", path, err)
             raise web.HTTPBadGateway from err
 
-    async def _handle_ws(
-        self, request: web.Request, entry: ConfigEntry, path: str
-    ) -> web.WebSocketResponse:
+    async def _handle_ws(self, request: web.Request, entry: ConfigEntry, path: str) -> web.WebSocketResponse:
         hass = request.app[KEY_HASS]
-        query = {
-            key: value
-            for key, value in request.query.items()
-            if key != SIGN_QUERY_PARAM
-        }
+        query = {key: value for key, value in request.query.items() if key != SIGN_QUERY_PARAM}
         query["token"] = entry.data[CONF_TOKEN]
         upstream_url = URL.build(
             scheme="wss",
@@ -301,10 +269,7 @@ class CameraUiProxyView(HomeAssistantView):
 
         protocols: list[str] = []
         if hdrs.SEC_WEBSOCKET_PROTOCOL in request.headers:
-            protocols = [
-                proto.strip()
-                for proto in request.headers[hdrs.SEC_WEBSOCKET_PROTOCOL].split(",")
-            ]
+            protocols = [proto.strip() for proto in request.headers[hdrs.SEC_WEBSOCKET_PROTOCOL].split(",")]
 
         ws_server = web.WebSocketResponse(
             protocols=protocols,
@@ -339,9 +304,7 @@ class CameraUiProxyView(HomeAssistantView):
 
 def _strip_csp_upgrade(value: str) -> str:
     # camera.ui's CSP upgrades http->https
-    directives = [
-        d for d in value.split(";") if d.strip().lower() != "upgrade-insecure-requests"
-    ]
+    directives = [d for d in value.split(";") if d.strip().lower() != "upgrade-insecure-requests"]
     return ";".join(directives)
 
 
@@ -355,11 +318,7 @@ def _is_websocket(request: web.Request) -> bool:
 
 def _get_loaded_entry(hass: HomeAssistant, entry_id: str) -> ConfigEntry | None:
     entry = hass.config_entries.async_get_entry(entry_id)
-    if (
-        not entry
-        or entry.domain != DOMAIN
-        or entry.state is not ConfigEntryState.LOADED
-    ):
+    if not entry or entry.domain != DOMAIN or entry.state is not ConfigEntryState.LOADED:
         return None
     return entry
 
@@ -395,5 +354,5 @@ async def _websocket_forward(
                     code=ws_to.close_code or aiohttp.WSCloseCode.OK,
                     message=(msg.extra or "").encode(),
                 )
-    except (RuntimeError, ConnectionResetError):
+    except RuntimeError, ConnectionResetError:
         pass

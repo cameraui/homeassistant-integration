@@ -28,9 +28,7 @@
       :aria-label="`Go live: ${title ?? ''}`"
       @click="goLive"
     >
-      <span
-        class="flex h-14 w-14 items-center justify-center rounded-full bg-black/45 pl-1 text-white transition group-hover/tap:scale-105"
-      >
+      <span class="flex h-14 w-14 items-center justify-center rounded-full bg-black/45 pl-1 text-white transition group-hover/tap:scale-105">
         <IconPlay class="h-7 w-7" />
       </span>
     </button>
