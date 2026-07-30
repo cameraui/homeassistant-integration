@@ -10,6 +10,7 @@ CONF_PROXY_SECRET = "proxy_secret"
 SIGNAL_DETECTION = f"{DOMAIN}_detection"
 SIGNAL_CONNECTION = f"{DOMAIN}_connection"
 SIGNAL_SENSOR_NEW = f"{DOMAIN}_sensor_new"
+SIGNAL_SENSOR_ASSIGNED = f"{DOMAIN}_sensor_assigned"
 
 # fired on the HA event bus for automations to trigger on
 EVENT_CAMERAUI = f"{DOMAIN}_event"
@@ -18,9 +19,9 @@ EVENT_CAMERAUI = f"{DOMAIN}_event"
 OBJECT_DETECTION_LABELS = ("person", "vehicle", "animal", "package")
 
 
-def signal_sensor_update(stable_id: str) -> str:
-    return f"{DOMAIN}_sensor_update_{stable_id}"
+def signal_sensor_update(sensor_id: str) -> str:
+    return f"{DOMAIN}_sensor_update_{sensor_id}"
 
 
-def signal_sensor_remove(stable_id: str) -> str:
-    return f"{DOMAIN}_sensor_remove_{stable_id}"
+def signal_sensor_remove(sensor_id: str) -> str:
+    return f"{DOMAIN}_sensor_remove_{sensor_id}"

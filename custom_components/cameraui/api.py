@@ -13,6 +13,10 @@ _LOGGER = logging.getLogger(__name__)
 class CameraUiApiError(Exception):
     """Raised when the camera.ui API returns an error."""
 
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
+
 
 class CameraUiAuthError(CameraUiApiError):
     """Raised when authentication fails."""
@@ -47,9 +51,9 @@ class CameraUiClient:
         except aiohttp.ClientError as err:
             raise CameraUiApiError(f"Request to {path} failed: {err}") from err
         if response.status in (401, 403):
-            raise CameraUiAuthError(f"Authentication failed ({response.status})")
+            raise CameraUiAuthError(f"Authentication failed ({response.status})", status=response.status)
         if response.status >= 400:
-            raise CameraUiApiError(f"Request to {path} returned {response.status}")
+            raise CameraUiApiError(f"Request to {path} returned {response.status}", status=response.status)
         return response
 
     async def get_info(self) -> dict[str, Any]:
@@ -81,15 +85,24 @@ class CameraUiClient:
         data = await response.json()
         return data.get("sources", [])
 
-    async def get_sensors(self, camera_name: str) -> list[dict[str, Any]]:
-        response = await self._request("GET", f"/cameras/{camera_name}/sensors")
+    async def get_sensors(self) -> list[dict[str, Any]]:
+        response = await self._request("GET", "/sensors")
         data = await response.json()
         return data.get("sensors", [])
 
-    async def command_sensor(self, camera_name: str, stable_id: str, property_name: str, value: Any) -> None:
+    async def get_sensor(self, sensor_id: str) -> dict[str, Any] | None:
+        try:
+            response = await self._request("GET", f"/sensors/{sensor_id}")
+        except CameraUiAuthError:
+            raise
+        except CameraUiApiError:
+            return None
+        return await response.json()
+
+    async def command_sensor(self, sensor_id: str, property_name: str, value: Any) -> None:
         await self._request(
             "POST",
-            f"/cameras/{camera_name}/sensors/{stable_id}/command",
+            f"/sensors/{sensor_id}/command",
             json={"property": property_name, "value": value},
         )
 

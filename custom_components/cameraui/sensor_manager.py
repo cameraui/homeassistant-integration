@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .api import CameraUiApiError
-from .const import SIGNAL_SENSOR_NEW, signal_sensor_remove, signal_sensor_update
+from .const import SIGNAL_SENSOR_ASSIGNED, SIGNAL_SENSOR_NEW, signal_sensor_remove, signal_sensor_update
 from .coordinator import CameraUiCoordinator
 from .sensor_map import sensor_platform
 
@@ -21,94 +21,120 @@ class CameraUiSensorManager:
         self._coordinator = coordinator
         self._client = coordinator.client
         self._sensors: dict[str, dict[str, Any]] = {}
+        self._warned_old_server = False
 
     async def async_setup(self) -> None:
         self._client.on_sensor(self._handle_push)
         self._client.on_connection(self._handle_connection)
-        for camera in self._coordinator.data.values():
-            await self._reconcile_camera(camera, emit_new=False)
+        await self._reconcile(emit_new=False)
 
     def sensors_for_platform(self, platform: Platform) -> list[dict[str, Any]]:
         return [sensor for sensor in self._sensors.values() if sensor_platform(sensor) is platform]
 
     def cameras_with_sensor_type(self, sensor_type: str) -> set[str]:
-        return {sensor["camera_id"] for sensor in self._sensors.values() if sensor.get("type") == sensor_type}
+        return {
+            camera_id
+            for sensor in self._sensors.values()
+            if sensor.get("type") == sensor_type
+            for camera_id in sensor.get("assignedCameraIds", [])
+        }
 
     def sensor_for_camera_type(self, camera_id: str, sensor_type: str) -> dict[str, Any] | None:
         return next(
             (
                 s
                 for s in self._sensors.values()
-                if s["camera_id"] == camera_id and s.get("type") == sensor_type
+                if s.get("type") == sensor_type and camera_id in s.get("assignedCameraIds", [])
             ),
             None,
         )
 
-    def get_sensor(self, global_id: str) -> dict[str, Any] | None:
-        return self._sensors.get(global_id)
+    def get_sensor(self, sensor_id: str) -> dict[str, Any] | None:
+        return self._sensors.get(sensor_id)
 
-    async def async_command(self, global_id: str, property_name: str, value: Any) -> None:
-        sensor = self._sensors.get(global_id)
-        if not sensor:
-            return
-        await self._client.command_sensor(sensor["camera_name"], sensor["stableId"], property_name, value)
+    def has_sensor(self, sensor_id: str) -> bool:
+        return sensor_id in self._sensors
 
-    async def _reconcile_camera(self, camera: dict[str, Any], emit_new: bool = True) -> None:
-        camera_id = camera.get("_id")
-        camera_name = camera.get("name")
-        if not camera_id or not camera_name:
-            return
+    async def async_command(self, sensor_id: str, property_name: str, value: Any) -> None:
+        await self._client.command_sensor(sensor_id, property_name, value)
 
+    async def _reconcile(self, emit_new: bool = True) -> None:
         try:
-            fetched = await self._client.get_sensors(camera_name)
+            fetched = await self._client.get_sensors()
         except CameraUiApiError as err:
-            _LOGGER.debug("Sensor fetch for %s failed: %s", camera_name, err)
+            if err.status == 404 and not self._warned_old_server:
+                self._warned_old_server = True
+                _LOGGER.warning(
+                    "The camera.ui server does not offer the sensors API yet; "
+                    "sensor entities stay disabled until the server is updated"
+                )
+            else:
+                _LOGGER.debug("Sensor fetch failed: %s", err)
             return
 
-        current: dict[str, dict[str, Any]] = {}
-        for sensor in fetched:
-            global_id = sensor.get("globalId")
-            if not global_id:
-                continue
-            current[global_id] = {**sensor, "camera_id": camera_id, "camera_name": camera_name}
+        current = {sensor["id"]: sensor for sensor in fetched if sensor.get("id") and sensor.get("exposed")}
 
-        for global_id, sensor in current.items():
-            existed = global_id in self._sensors
-            self._sensors[global_id] = sensor
+        for sensor_id, sensor in current.items():
+            existed = sensor_id in self._sensors
+            self._sensors[sensor_id] = sensor
             if not existed and emit_new:
                 async_dispatcher_send(self.hass, SIGNAL_SENSOR_NEW, sensor)
             elif existed:
-                async_dispatcher_send(self.hass, signal_sensor_update(global_id))
+                async_dispatcher_send(self.hass, signal_sensor_update(sensor_id))
 
-        stale = [
-            global_id
-            for global_id, sensor in self._sensors.items()
-            if sensor.get("camera_id") == camera_id and global_id not in current
-        ]
-        for global_id in stale:
-            self._sensors.pop(global_id, None)
-            async_dispatcher_send(self.hass, signal_sensor_remove(global_id))
+        for sensor_id in [sensor_id for sensor_id in self._sensors if sensor_id not in current]:
+            self._sensors.pop(sensor_id, None)
+            async_dispatcher_send(self.hass, signal_sensor_remove(sensor_id))
+
+    async def _add_sensor(self, sensor_id: str) -> None:
+        sensor = await self._client.get_sensor(sensor_id)
+        if not sensor or not sensor.get("exposed"):
+            return
+        existed = sensor_id in self._sensors
+        self._sensors[sensor_id] = sensor
+        if existed:
+            async_dispatcher_send(self.hass, signal_sensor_update(sensor_id))
+        else:
+            async_dispatcher_send(self.hass, SIGNAL_SENSOR_NEW, sensor)
 
     def _handle_push(self, message: dict[str, Any]) -> None:
-        global_id = message.get("globalId")
-        if not global_id:
+        sensor_id = message.get("sensorId")
+        if not sensor_id:
             return
 
-        if message.get("type") == "changed":
-            sensor = self._sensors.get(global_id)
+        message_type = message.get("type")
+
+        if message_type == "added":
+            self.hass.async_create_task(self._add_sensor(sensor_id))
+            return
+
+        if message_type == "removed":
+            if self._sensors.pop(sensor_id, None) is not None:
+                async_dispatcher_send(self.hass, signal_sensor_remove(sensor_id))
+            return
+
+        sensor = self._sensors.get(sensor_id)
+        if sensor is None:
+            return
+
+        if message_type == "changed":
             property_name = message.get("property")
-            if sensor is not None and property_name is not None:
-                sensor.setdefault("properties", {})[property_name] = message.get("value")
-                async_dispatcher_send(self.hass, signal_sensor_update(global_id))
+            if property_name is None:
+                return
+            sensor.setdefault("properties", {})[property_name] = message.get("value")
+        elif message_type == "meta":
+            previous_assigned = set(sensor.get("assignedCameraIds", []))
+            for key in ("displayName", "connected", "capabilities", "assignedCameraIds"):
+                if key in message:
+                    sensor[key] = message[key]
+            if set(sensor.get("assignedCameraIds", [])) - previous_assigned:
+                async_dispatcher_send(self.hass, SIGNAL_SENSOR_ASSIGNED, sensor)
+        else:
             return
 
-        # added/removed carry no full sensor data, so reconcile the whole camera
-        camera = self._coordinator.data.get(message.get("cameraId", ""))
-        if camera:
-            self.hass.async_create_task(self._reconcile_camera(camera))
+        async_dispatcher_send(self.hass, signal_sensor_update(sensor_id))
 
     def _handle_connection(self, connected: bool) -> None:
         if not connected:
             return
-        for camera in self._coordinator.data.values():
-            self.hass.async_create_task(self._reconcile_camera(camera))
+        self.hass.async_create_task(self._reconcile())

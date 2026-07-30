@@ -80,7 +80,7 @@ def async_setup_ptz_service(hass: HomeAssistant) -> None:
             sensor = manager.sensor_for_camera_type(entity.unique_id, "ptz")
             if not sensor:
                 continue
-            await manager.async_command(sensor["globalId"], prop, value)
+            await manager.async_command(sensor["id"], prop, value)
             commanded += 1
 
         if commanded == 0:

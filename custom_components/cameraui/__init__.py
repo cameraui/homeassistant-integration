@@ -84,4 +84,12 @@ async def async_remove_config_entry_device(
     hass: HomeAssistant, entry: CameraUiConfigEntry, device: DeviceEntry
 ) -> bool:
     cameras = entry.runtime_data.coordinator.data
-    return not any(domain == DOMAIN and ident in cameras for domain, ident in device.identifiers)
+    sensors = entry.runtime_data.sensor_manager
+    for domain, ident in device.identifiers:
+        if domain != DOMAIN:
+            continue
+        if ident in cameras:
+            return False
+        if ident.startswith("sensor_") and sensors.has_sensor(ident.removeprefix("sensor_")):
+            return False
+    return True
