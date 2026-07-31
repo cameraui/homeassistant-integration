@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
+import aiohttp
 import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PORT
@@ -61,16 +63,36 @@ class CameraUiConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(step_id="user", data_schema=STEP_USER_SCHEMA, errors=errors)
 
+    async def _async_reachable(self, host: str, port: int) -> bool:
+        session = async_get_clientsession(self.hass, verify_ssl=False)
+        try:
+            async with asyncio.timeout(5):
+                await session.get(f"https://{host}:{port}/api/", ssl=False)
+        except (TimeoutError, aiohttp.ClientError):
+            return False
+        return True
+
     async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> ConfigFlowResult:
+        host = discovery_info.host
+        port = discovery_info.port or DEFAULT_PORT
         instance_id = discovery_info.properties.get("id")
         if instance_id:
             await self.async_set_unique_id(instance_id)
-            self._abort_if_unique_id_configured(
-                updates={CONF_HOST: discovery_info.host, CONF_PORT: discovery_info.port or DEFAULT_PORT}
+            entry = next(
+                (e for e in self._async_current_entries(include_ignore=False) if e.unique_id == instance_id),
+                None,
             )
+            # servers in docker may announce bridge addresses, never trade a stored host for one we can't reach
+            if (
+                entry
+                and (entry.data[CONF_HOST], entry.data[CONF_PORT]) != (host, port)
+                and not await self._async_reachable(host, port)
+            ):
+                return self.async_abort(reason="already_configured")
+            self._abort_if_unique_id_configured(updates={CONF_HOST: host, CONF_PORT: port})
 
-        self._host = discovery_info.host
-        self._port = discovery_info.port or DEFAULT_PORT
+        self._host = host
+        self._port = port
         self.context["title_placeholders"] = {"host": self._host}
         return await self.async_step_zeroconf_confirm()
 
