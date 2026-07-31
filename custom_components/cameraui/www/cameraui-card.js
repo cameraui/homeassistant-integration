@@ -241,7 +241,8 @@ function De(e) {
 			if (i) for (let e in i) t[e] = i[e];
 		}
 		return t;
-	} else if (P(e) || F(e)) return e;
+	}
+	if (P(e) || F(e)) return e;
 }
 var Oe = /;(?![^(]*\))/g, ke = /:([^]+)/, Ae = /\/\*[^]*?\*\//g;
 function je(e) {
@@ -291,7 +292,7 @@ function Le(e, t) {
 }
 var Re = (e) => !!(e && e.__v_isRef === !0), ze = (e) => P(e) ? e : e == null ? "" : M(e) || F(e) && (e.toString === ue || !N(e.toString)) ? Re(e) ? ze(e.value) : JSON.stringify(e, Be, 2) : String(e), Be = (e, t) => Re(t) ? Be(e, t.value) : ae(t) ? { [`Map(${t.size})`]: [...t.entries()].reduce((e, [t, n], r) => (e[Ve(t, r) + " =>"] = n, e), {}) } : oe(t) ? { [`Set(${t.size})`]: [...t.values()].map((e) => Ve(e)) } : ce(t) ? Ve(t) : F(t) && !M(t) && !pe(t) ? String(t) : t, Ve = (e, t = "") => ce(e) ? `Symbol(${e.description ?? t})` : e, R, He = class {
 	constructor(e = !1) {
-		this.detached = e, this._active = !0, this._on = 0, this.effects = [], this.cleanups = [], this._isPaused = !1, this._warnOnRun = !0, this.__v_skip = !0, !e && R && (R.active ? (this.parent = R, this.index = (R.scopes ||= []).push(this) - 1) : (this._active = !1, this._warnOnRun = !1));
+		this.detached = e, this._active = !0, this._on = 0, this.effects = [], this.cleanups = [], this._isPaused = !1, this._warnOnRun = !0, this.__v_skip = !0, !e && R && (R.active ? (this.parent = R, this.index = (R.scopes || (R.scopes = [])).push(this) - 1) : (this._active = !1, this._warnOnRun = !1));
 	}
 	get active() {
 		return this._active;
@@ -586,9 +587,7 @@ function bt(e, t, n, r, i, a) {
 			case "delete":
 				i || (s(o.get(gt)), ae(e) && s(o.get(_t)));
 				break;
-			case "set":
-				ae(e) && s(o.get(gt));
-				break;
+			case "set": ae(e) && s(o.get(gt));
 		}
 	}
 	$e();
@@ -1824,7 +1823,7 @@ function Ci(e, t, n, r = !1) {
 	let i = {}, a = xi();
 	e.propsDefaults = /* @__PURE__ */ Object.create(null), Ti(e, t, i, a);
 	for (let t in e.propsOptions[0]) t in i || (i[t] = void 0);
-	n ? e.props = r ? i : /* @__PURE__ */ rn(i) : e.type.props ? e.props = i : e.props = a, e.attrs = a;
+	e.props = n ? r ? i : /* @__PURE__ */ rn(i) : e.type.props ? i : a, e.attrs = a;
 }
 function wi(e, t, n, r) {
 	let { props: i, attrs: a, vnode: { patchFlag: o } } = e, s = /* @__PURE__ */ B(i), [c] = e.propsOptions, l = !1;
@@ -1914,7 +1913,8 @@ function Oi(e, t, n = !1) {
 				if (n === "Boolean") {
 					c = !0;
 					break;
-				} else n === "String" && (l = !1);
+				}
+				n === "String" && (l = !1);
 			}
 			else c = N(i) && i.name === "Boolean";
 			r[0] = c, r[1] = l, (c || j(r, "default")) && s.push(t);
@@ -2147,7 +2147,8 @@ function Bi(e, t) {
 			if (p & 128) {
 				oe(l, f, n, r, i, a, o, s, c);
 				return;
-			} else if (p & 256) {
+			}
+			if (p & 256) {
 				ae(l, f, n, r, i, a, o, s, c);
 				return;
 			}
@@ -3099,7 +3100,11 @@ function ts(e, t = {
 	}, n);
 	Uo(() => {
 		let n = Yo(e);
-		n && (o.value = "offsetWidth" in n ? n.offsetWidth : t.width, s.value = "offsetHeight" in n ? n.offsetHeight : t.height);
+		if (n && "offsetWidth" in n) if (i === "content-box" && r) {
+			let e = r.getComputedStyle(n), t = Number.parseFloat(e.paddingLeft) + Number.parseFloat(e.paddingRight), i = Number.parseFloat(e.paddingTop) + Number.parseFloat(e.paddingBottom), a = Number.parseFloat(e.borderLeftWidth) + Number.parseFloat(e.borderRightWidth), c = Number.parseFloat(e.borderTopWidth) + Number.parseFloat(e.borderBottomWidth);
+			o.value = n.offsetWidth - t - a, s.value = n.offsetHeight - i - c;
+		} else o.value = n.offsetWidth, s.value = n.offsetHeight;
+		else n && (o.value = t.width, s.value = t.height);
 	});
 	let l = G(() => Yo(e), (e) => {
 		o.value = e ? t.width : 0, s.value = e ? t.height : 0;
@@ -3458,30 +3463,35 @@ var Us = class {
 			cameraImplRpc: `plugin.${e}.camera.${t}.impl.rpc`
 		};
 	}
-	static pluginSensorNamespaces(e, t, n) {
-		return { sensorStorageRpc: `plugin.${e}.camera.${t}.sensor.${n}.storage.rpc` };
+	static pluginSensorNamespaces(e, t) {
+		return { sensorStorageRpc: `plugin.${e}.sensor.${t}.storage.rpc` };
 	}
-	static sensorControllerNamespaces(e) {
+	static sensorRegistryNamespaces() {
 		return {
-			sensorSubject: `camera.${e}.sensors.subject`,
-			sensorRpc: `camera.${e}.sensors.rpc`,
-			sensorWriteSubject: `camera.${e}.sensors.writes`
+			sensorsSubject: "sensors.subject",
+			sensorsRpc: "sensors.rpc"
 		};
 	}
-	static sensorEventNamespaces(e, t) {
-		return { sensorSubject: `camera.${e}.sensor.${t}.subject` };
+	static sensorCameraViewNamespaces(e) {
+		return { sensorWriteSubject: `camera.${e}.sensors.writes` };
 	}
-	static sensorProviderNamespaces(e, t, n) {
-		return { sensorRpc: `plugin.${e}.camera.${t}.sensor.${n}.rpc` };
+	static sensorEventNamespaces(e) {
+		return { sensorSubject: `sensor.${e}.subject` };
+	}
+	static sensorProviderNamespaces(e, t) {
+		return { sensorRpc: `plugin.${e}.sensor.${t}.rpc` };
+	}
+	static legacySensorNamespaces(e) {
+		return {
+			sensorSubject: `camera.${e}.sensors.subject`,
+			sensorRpc: `camera.${e}.sensors.rpc`
+		};
 	}
 	static frameWorkerDetectionNamespaces(e) {
 		return { detectionRpc: `camera.${e}.frameWorker.detection.rpc` };
 	}
 	static detectionEventNamespaces(e) {
 		return { detectionEventSubject: `camera.${e}.events.subject` };
-	}
-	static sensorControllerRpc(e) {
-		return `camera.${e}.sensors.controller.rpc`;
 	}
 	static terminalManagerNamespaces() {
 		return {
@@ -3591,7 +3601,7 @@ function sc(e, t) {
 	};
 }
 async function cc(e, t) {
-	let n = Us.cameraNamespaces(t._id), r = Us.sensorControllerNamespaces(t._id), i = "rpc" in e && "value" in e.rpc ? e : void 0, a = i ? i.rpc : /* @__PURE__ */ H(e), o, s, c = /* @__PURE__ */ H(t), l = /* @__PURE__ */ V(!1), u = /* @__PURE__ */ V(!1), d = /* @__PURE__ */ H(oc(t._id)), f = /* @__PURE__ */ V(!1), p = /* @__PURE__ */ V({}), m = sc(t._id, () => {
+	let n = Us.cameraNamespaces(t._id), r = Us.sensorRegistryNamespaces(), i = "rpc" in e && "value" in e.rpc ? e : void 0, a = i ? i.rpc : /* @__PURE__ */ H(e), o, s, c = /* @__PURE__ */ H(t), l = /* @__PURE__ */ V(!1), u = /* @__PURE__ */ V(!1), d = /* @__PURE__ */ H(oc(t._id)), f = /* @__PURE__ */ V(!1), p = /* @__PURE__ */ V({}), m = sc(t._id, () => {
 		d.value = oc(t._id);
 	}), h = X(() => c.value.name), g = X(() => c.value.room), _ = X(() => c.value.nativeId), v = X(() => c.value.disabled), y = X(() => c.value.detectionSettings?.snooze ?? !1), b = X(() => c.value.isCloud), x = X(() => JSON.parse(JSON.stringify(c.value.sources)).map((e) => ({
 		...e,
@@ -3640,25 +3650,39 @@ async function cc(e, t) {
 			case "frameWorkerState":
 				u.value = e.data;
 				break;
-			case "snapshot:updated":
-				ac(t._id, e.data.snapshot, Date.now());
-				break;
+			case "snapshot:updated": ac(t._id, e.data.snapshot, Date.now());
 		}
 	}
 	function P(e) {
 		if (e.type === "sensor:added") {
-			let t = e.data;
+			let n = e.data;
+			if (!n.sensor.assignedCameraIds.includes(t._id) || !n.sensor.connected) return;
 			p.value = {
 				...p.value,
-				[t.sensor.id]: t.state
+				[n.sensor.id]: n.state
 			};
-		} else if (e.type === "sensor:removed") {
+		} else if (e.type === "sensor:deleted") {
 			let t = e.data, n = { ...p.value };
 			delete n[t.sensorId], p.value = n;
+		} else if (e.type === "sensor:connected:changed") {
+			let t = e.data;
+			if (t.connected) se().catch(() => {});
+			else {
+				let e = { ...p.value };
+				delete e[t.sensorId], p.value = e;
+			}
+		} else if (e.type === "sensor:assignment:changed") {
+			let n = e.data;
+			if (n.cameraId !== t._id) return;
+			if (n.assigned) se().catch(() => {});
+			else {
+				let e = { ...p.value };
+				delete e[n.sensorId], p.value = e;
+			}
 		}
 	}
 	async function ce() {
-		o?.(), s?.(), o = await Ks(a, (e) => e.subscribe(n.cameraSubject, N)), s = await Ks(a, (e) => e.subscribe(r.sensorSubject, P)), await se();
+		o?.(), s?.(), o = await Ks(a, (e) => e.subscribe(n.cameraSubject, N)), s = await Ks(a, (e) => e.subscribe(r.sensorsSubject, P)), await se();
 	}
 	async function F() {
 		o?.(), o = void 0, s?.(), s = void 0, m();
@@ -3898,11 +3922,9 @@ function Oc(e) {
 			case "standby":
 				c.value || (a() || r(), v());
 				break;
-			case "activity":
-				l.value ? (c.value = !1, a() || r()) : u = setTimeout(() => {
-					s.value === "activity" && !l.value && h();
-				}, o.activityTimeout);
-				break;
+			case "activity": l.value ? (c.value = !1, a() || r()) : u = setTimeout(() => {
+				s.value === "activity" && !l.value && h();
+			}, o.activityTimeout);
 		}
 	}
 	function v() {
@@ -3923,11 +3945,9 @@ function Oc(e) {
 			case "standby":
 				v();
 				break;
-			case "activity":
-				f(), l.value || (u = setTimeout(() => {
-					h();
-				}, o.activityTimeout));
-				break;
+			case "activity": f(), l.value || (u = setTimeout(() => {
+				h();
+			}, o.activityTimeout));
 		}
 	}
 	function S() {
@@ -4037,7 +4057,7 @@ var Hc = {
 		ICE_SERVERS: [{ urls: "stun:stun.l.google.com:19302" }]
 	},
 	MSE: {
-		BUFFER_SIZE: 2 * 1024 * 1024,
+		BUFFER_SIZE: 2097152,
 		BUFFER_WINDOW: 5
 	},
 	CODECS: {
@@ -4381,9 +4401,7 @@ async function pl(e, t) {
 		case "webrtc/answer":
 			await e.handleAnswer(t.value);
 			break;
-		case "webrtc/candidate":
-			t.value && await e.handleCandidate(t.value);
-			break;
+		case "webrtc/candidate": t.value && await e.handleCandidate(t.value);
 	}
 }
 var $ = new T("StreamConnection"), ml = class {
@@ -4625,7 +4643,7 @@ var $ = new T("StreamConnection"), ml = class {
 	}
 	setupWatchers() {
 		let e = G(() => this.target.value?.endpoint.url ?? null, (e, t) => {
-			!e || !t || e === t || this.status.value === "idle" || this.status.value === "closed" || this.restart();
+			!e || !t || e === t || this.status.value !== "idle" && this.status.value !== "closed" && this.restart();
 		});
 		this.stopWatchers.push(e);
 		let t = G(() => this.camera.value?.sources.value, () => {
@@ -4807,9 +4825,7 @@ var $ = new T("StreamConnection"), ml = class {
 			case "mse":
 				this.mseHandler && typeof e.value == "string" && this.mseHandler.initializeBuffer(e.value);
 				break;
-			case "error":
-				this.requestedMode.value !== "auto" && (this.error.value = Error(e.value), this.status.value = "error");
-				break;
+			case "error": this.requestedMode.value !== "auto" && (this.error.value = Error(e.value), this.status.value = "error");
 		}
 	}
 	async startWebRTC(e) {
@@ -5789,13 +5805,14 @@ var bu = fn({
 	height: "1.2em"
 };
 function Su(e, t) {
-	return K(), q("svg", xu, [...t[0] ||= [J("g", {
+	return K(), q("svg", xu, [...t[0] ||= [J("path", {
 		fill: "none",
-		"fill-rule": "evenodd"
-	}, [J("path", { d: "m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z" }), J("path", {
-		fill: "currentColor",
-		d: "M17.5 6.5H20a1.5 1.5 0 0 1 0 3h-3A2.5 2.5 0 0 1 14.5 7V4a1.5 1.5 0 0 1 3 0zM4 6.5h2.5V4a1.5 1.5 0 1 1 3 0v3A2.5 2.5 0 0 1 7 9.5H4a1.5 1.5 0 1 1 0-3m0 11h2.5V20a1.5 1.5 0 0 0 3 0v-3A2.5 2.5 0 0 0 7 14.5H4a1.5 1.5 0 0 0 0 3m16 0h-2.5V20a1.5 1.5 0 0 1-3 0v-3a2.5 2.5 0 0 1 2.5-2.5h3a1.5 1.5 0 0 1 0 3"
-	})], -1)]]);
+		stroke: "currentColor",
+		"stroke-linecap": "round",
+		"stroke-linejoin": "round",
+		"stroke-width": "3",
+		d: "M8 4v3a1 1 0 0 1-1 1H4m4 12v-3a1 1 0 0 0-1-1H4M16 4v3a1 1 0 0 0 1 1h3m-4 12v-3a1 1 0 0 1 1-1h3"
+	}, null, -1)]]);
 }
 var Cu = fn({
 	name: "mingcute-fullscreen-exit-fill",
@@ -5806,13 +5823,14 @@ var Cu = fn({
 	height: "1.2em"
 };
 function Tu(e, t) {
-	return K(), q("svg", wu, [...t[0] ||= [J("g", {
+	return K(), q("svg", wu, [...t[0] ||= [J("path", {
 		fill: "none",
-		"fill-rule": "evenodd"
-	}, [J("path", { d: "m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z" }), J("path", {
-		fill: "currentColor",
-		d: "M18.5 5.5H16a1.5 1.5 0 0 1 0-3h3A2.5 2.5 0 0 1 21.5 5v3a1.5 1.5 0 0 1-3 0zM8 5.5H5.5V8a1.5 1.5 0 1 1-3 0V5A2.5 2.5 0 0 1 5 2.5h3a1.5 1.5 0 1 1 0 3m0 13H5.5V16a1.5 1.5 0 0 0-3 0v3A2.5 2.5 0 0 0 5 21.5h3a1.5 1.5 0 0 0 0-3m8 0h2.5V16a1.5 1.5 0 0 1 3 0v3a2.5 2.5 0 0 1-2.5 2.5h-3a1.5 1.5 0 0 1 0-3"
-	})], -1)]]);
+		stroke: "currentColor",
+		"stroke-linecap": "round",
+		"stroke-linejoin": "round",
+		"stroke-width": "3",
+		d: "M4 8V5a1 1 0 0 1 1-1h3M4 16v3a1 1 0 0 0 1 1h3M20 8V5a1 1 0 0 0-1-1h-3m4 12v3a1 1 0 0 1-1 1h-3"
+	}, null, -1)]]);
 }
 var Eu = fn({
 	name: "mingcute-fullscreen-fill",
@@ -6160,7 +6178,7 @@ var qu = fn({
 			"lang"
 		]))), 128))], 4)) : (K(), q("div", Qu, "No cameras configured"))]));
 	}
-}), ed = "/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */\n@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-font-weight:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1}::backdrop{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-font-weight:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1}}}@layer theme{:root,:host{--font-sans:var(--paper-font-common-base_-_font-family,Roboto, sans-serif);--font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;--color-black:#000;--color-white:#fff;--spacing:.25rem;--text-xs:.75rem;--text-xs--line-height:calc(1 / .75);--text-sm:.875rem;--text-sm--line-height:calc(1.25 / .875);--font-weight-medium:500;--font-weight-semibold:600;--radius-md:.375rem;--animate-pulse:pulse 2s cubic-bezier(.4, 0, .6, 1) infinite;--aspect-video:16 / 9;--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono);--color-cui-primary:#df2a4c}}@layer base{*,:after,:before{box-sizing:border-box;border:0 solid;margin:0;padding:0}::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", \"Noto Sans\", Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring:where(:not(iframe)){outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab, red, red)){::placeholder{color:color-mix(in oklab, currentcolor 50%, transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}}@layer components;@layer utilities{.pointer-events-auto{pointer-events:auto}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.static{position:static}.inset-0{inset:0}.inset-x-0{inset-inline:0}.top-0{top:0}.top-1\\.5{top:calc(var(--spacing) * 1.5)}.top-2{top:calc(var(--spacing) * 2)}.right-2{right:calc(var(--spacing) * 2)}.right-3{right:calc(var(--spacing) * 3)}.bottom-0{bottom:0}.bottom-1\\.5{bottom:calc(var(--spacing) * 1.5)}.bottom-2\\.5{bottom:calc(var(--spacing) * 2.5)}.bottom-16{bottom:calc(var(--spacing) * 16)}.left-2\\.5{left:calc(var(--spacing) * 2.5)}.left-3{left:calc(var(--spacing) * 3)}.z-10{z-index:10}.z-20{z-index:20}.flex{display:flex}.grid{display:grid}.inline-flex{display:inline-flex}.aspect-video{aspect-ratio:var(--aspect-video)}.h-1\\/3{height:33.3333%}.h-2{height:calc(var(--spacing) * 2)}.h-5{height:calc(var(--spacing) * 5)}.h-6{height:calc(var(--spacing) * 6)}.h-7{height:calc(var(--spacing) * 7)}.h-9{height:calc(var(--spacing) * 9)}.h-10{height:calc(var(--spacing) * 10)}.h-14{height:calc(var(--spacing) * 14)}.h-24{height:calc(var(--spacing) * 24)}.h-28{height:calc(var(--spacing) * 28)}.h-\\[18px\\]{height:18px}.h-full{height:100%}.max-h-20{max-height:calc(var(--spacing) * 20)}.w-2{width:calc(var(--spacing) * 2)}.w-5{width:calc(var(--spacing) * 5)}.w-6{width:calc(var(--spacing) * 6)}.w-7{width:calc(var(--spacing) * 7)}.w-9{width:calc(var(--spacing) * 9)}.w-10{width:calc(var(--spacing) * 10)}.w-14{width:calc(var(--spacing) * 14)}.w-24{width:calc(var(--spacing) * 24)}.w-\\[18px\\]{width:18px}.w-auto{width:auto}.w-full{width:100%}.flex-1{flex:1}.flex-none{flex:none}.shrink-0{flex-shrink:0}.transform{transform:var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)}.animate-pulse{animation:var(--animate-pulse)}.cursor-pointer{cursor:pointer}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.gap-0\\.5{gap:calc(var(--spacing) * .5)}.gap-1{gap:var(--spacing)}.gap-2{gap:calc(var(--spacing) * 2)}.gap-px{gap:1px}.overflow-hidden{overflow:hidden}.rounded-\\[10px\\]{border-radius:10px}.rounded-full{border-radius:3.40282e38px}.rounded-md{border-radius:var(--radius-md)}.\\!bg-\\[\\#ff9800\\]{background-color:#ff9800!important}.bg-\\[\\#f5222d\\]{background-color:#f5222d}.bg-black{background-color:var(--color-black)}.bg-black\\/40{background-color:#0006}@supports (color:color-mix(in lab, red, red)){.bg-black\\/40{background-color:color-mix(in oklab, var(--color-black) 40%, transparent)}}.bg-black\\/45{background-color:#00000073}@supports (color:color-mix(in lab, red, red)){.bg-black\\/45{background-color:color-mix(in oklab, var(--color-black) 45%, transparent)}}.bg-black\\/50{background-color:#00000080}@supports (color:color-mix(in lab, red, red)){.bg-black\\/50{background-color:color-mix(in oklab, var(--color-black) 50%, transparent)}}.bg-transparent{background-color:#0000}.bg-white\\/20{background-color:#fff3}@supports (color:color-mix(in lab, red, red)){.bg-white\\/20{background-color:color-mix(in oklab, var(--color-white) 20%, transparent)}}.bg-gradient-to-b{--tw-gradient-position:to bottom in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.bg-gradient-to-t{--tw-gradient-position:to top in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.from-black\\/55{--tw-gradient-from:#0000008c}@supports (color:color-mix(in lab, red, red)){.from-black\\/55{--tw-gradient-from:color-mix(in oklab, var(--color-black) 55%, transparent)}}.from-black\\/55{--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.from-black\\/70{--tw-gradient-from:#000000b3}@supports (color:color-mix(in lab, red, red)){.from-black\\/70{--tw-gradient-from:color-mix(in oklab, var(--color-black) 70%, transparent)}}.from-black\\/70{--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.via-black\\/40{--tw-gradient-via:#0006}@supports (color:color-mix(in lab, red, red)){.via-black\\/40{--tw-gradient-via:color-mix(in oklab, var(--color-black) 40%, transparent)}}.via-black\\/40{--tw-gradient-via-stops:var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-via) var(--tw-gradient-via-position), var(--tw-gradient-to) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-via-stops)}.to-transparent{--tw-gradient-to:transparent;--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.object-cover{object-fit:cover}.p-4{padding:calc(var(--spacing) * 4)}.px-2{padding-inline:calc(var(--spacing) * 2)}.px-3{padding-inline:calc(var(--spacing) * 3)}.px-4{padding-inline:calc(var(--spacing) * 4)}.py-0\\.5{padding-block:calc(var(--spacing) * .5)}.py-2\\.5{padding-block:calc(var(--spacing) * 2.5)}.pt-8{padding-top:calc(var(--spacing) * 8)}.pr-28{padding-right:calc(var(--spacing) * 28)}.pb-2{padding-bottom:calc(var(--spacing) * 2)}.pl-1{padding-left:var(--spacing)}.text-center{text-align:center}.text-sm{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height))}.text-xs{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height))}.text-\\[11px\\]{font-size:11px}.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}.font-semibold{--tw-font-weight:var(--font-weight-semibold);font-weight:var(--font-weight-semibold)}.text-ellipsis{text-overflow:ellipsis}.whitespace-nowrap{white-space:nowrap}.text-\\[color\\:var\\(--error-color\\,\\#db4437\\)\\]{color:var(--error-color,#db4437)}.text-\\[color\\:var\\(--secondary-text-color\\,\\#727272\\)\\]{color:var(--secondary-text-color,#727272)}.text-white{color:var(--color-white)}.text-white\\/60{color:#fff9}@supports (color:color-mix(in lab, red, red)){.text-white\\/60{color:color-mix(in oklab, var(--color-white) 60%, transparent)}}.opacity-0{opacity:0}.opacity-20{opacity:.2}.opacity-100{opacity:1}.shadow{--tw-shadow:0 1px 3px 0 var(--tw-shadow-color,#0000001a), 0 1px 2px -1px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.transition{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter,display,content-visibility,overlay,pointer-events;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-opacity{transition-property:opacity;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}@media (hover:hover){.group-hover\\/tap\\:scale-105:is(:where(.group\\/tap):hover *){--tw-scale-x:105%;--tw-scale-y:105%;--tw-scale-z:105%;scale:var(--tw-scale-x) var(--tw-scale-y)}.hover\\:bg-black\\/20:hover{background-color:#0003}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-black\\/20:hover{background-color:color-mix(in oklab, var(--color-black) 20%, transparent)}}.hover\\:bg-black\\/60:hover{background-color:#0009}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-black\\/60:hover{background-color:color-mix(in oklab, var(--color-black) 60%, transparent)}}.hover\\:bg-white\\/15:hover{background-color:#ffffff26}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-white\\/15:hover{background-color:color-mix(in oklab, var(--color-white) 15%, transparent)}}}.disabled\\:cursor-default:disabled{cursor:default}.disabled\\:opacity-40:disabled{opacity:.4}}.cui-video{object-fit:cover!important}.cui-video:fullscreen{object-fit:contain!important}@keyframes cui-spin-rotate{to{transform:rotate(360deg)}}@keyframes cui-spin-dash{0%{stroke-dasharray:1 200;stroke-dashoffset:0}50%{stroke-dasharray:89 200;stroke-dashoffset:-35px}to{stroke-dasharray:89 200;stroke-dashoffset:-124px}}.cui-spin{transform-origin:50%;animation:2s linear infinite cui-spin-rotate}.cui-spin-circle{stroke:var(--color-cui-primary,#df2a4c);stroke-linecap:round;animation:1.5s ease-in-out infinite cui-spin-dash}.cui-ptz-pad,.cui-ptz-track{touch-action:none;cursor:grab;background:#0000008c;border-radius:9999px;box-shadow:inset 0 0 0 1px #ffffff1f}.cui-ptz-pad:active,.cui-ptz-track:active{cursor:grabbing}.cui-ptz-knob{pointer-events:none;background:#fff;border-radius:9999px;justify-content:center;align-items:center;width:1.625rem;height:1.625rem;display:flex;position:absolute;top:50%;left:50%;box-shadow:0 2px 6px #00000059}.cui-ptz-knob-icon{color:#00000059;width:.85rem;height:.85rem}.cui-ptz-mark{color:#ffffff8c;pointer-events:none;font-size:.8rem;line-height:1;position:absolute;left:50%;transform:translate(-50%)}@property --tw-rotate-x{syntax:\"*\";inherits:false}@property --tw-rotate-y{syntax:\"*\";inherits:false}@property --tw-rotate-z{syntax:\"*\";inherits:false}@property --tw-skew-x{syntax:\"*\";inherits:false}@property --tw-skew-y{syntax:\"*\";inherits:false}@property --tw-gradient-position{syntax:\"*\";inherits:false}@property --tw-gradient-from{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-via{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-to{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-stops{syntax:\"*\";inherits:false}@property --tw-gradient-via-stops{syntax:\"*\";inherits:false}@property --tw-gradient-from-position{syntax:\"<length-percentage>\";inherits:false;initial-value:0%}@property --tw-gradient-via-position{syntax:\"<length-percentage>\";inherits:false;initial-value:50%}@property --tw-gradient-to-position{syntax:\"<length-percentage>\";inherits:false;initial-value:100%}@property --tw-font-weight{syntax:\"*\";inherits:false}@property --tw-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-shadow-color{syntax:\"*\";inherits:false}@property --tw-shadow-alpha{syntax:\"<percentage>\";inherits:false;initial-value:100%}@property --tw-inset-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-inset-shadow-color{syntax:\"*\";inherits:false}@property --tw-inset-shadow-alpha{syntax:\"<percentage>\";inherits:false;initial-value:100%}@property --tw-ring-color{syntax:\"*\";inherits:false}@property --tw-ring-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-inset-ring-color{syntax:\"*\";inherits:false}@property --tw-inset-ring-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-ring-inset{syntax:\"*\";inherits:false}@property --tw-ring-offset-width{syntax:\"<length>\";inherits:false;initial-value:0}@property --tw-ring-offset-color{syntax:\"*\";inherits:false;initial-value:#fff}@property --tw-ring-offset-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-scale-x{syntax:\"*\";inherits:false;initial-value:1}@property --tw-scale-y{syntax:\"*\";inherits:false;initial-value:1}@property --tw-scale-z{syntax:\"*\";inherits:false;initial-value:1}@keyframes pulse{50%{opacity:.5}}", td = {
+}), ed = "/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */\n@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-font-weight:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1}::backdrop{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-font-weight:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1}}}@layer theme{:root,:host{--font-sans:var(--paper-font-common-base_-_font-family,Roboto, sans-serif);--font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;--color-black:#000;--color-white:#fff;--spacing:.25rem;--text-xs:.75rem;--text-xs--line-height:calc(1 / .75);--text-sm:.875rem;--text-sm--line-height:calc(1.25 / .875);--font-weight-medium:500;--font-weight-semibold:600;--radius-md:.375rem;--animate-pulse:pulse 2s cubic-bezier(.4, 0, .6, 1) infinite;--aspect-video:16 / 9;--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono);--color-cui-primary:#df2a4c}}@layer base{*,:after,:before{box-sizing:border-box;border:0 solid;margin:0;padding:0}::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", \"Noto Sans\", Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring:where(:not(iframe)){outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab, red, red)){::placeholder{color:color-mix(in oklab, currentcolor 50%, transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}}@layer components;@layer utilities{.pointer-events-auto{pointer-events:auto}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.static{position:static}.inset-0{inset:0}.inset-x-0{inset-inline:0}.top-0{top:0}.top-1\\.5{top:calc(var(--spacing) * 1.5)}.top-2{top:calc(var(--spacing) * 2)}.right-2{right:calc(var(--spacing) * 2)}.right-3{right:calc(var(--spacing) * 3)}.bottom-0{bottom:0}.bottom-1\\.5{bottom:calc(var(--spacing) * 1.5)}.bottom-2\\.5{bottom:calc(var(--spacing) * 2.5)}.bottom-16{bottom:calc(var(--spacing) * 16)}.left-2\\.5{left:calc(var(--spacing) * 2.5)}.left-3{left:calc(var(--spacing) * 3)}.z-10{z-index:10}.z-20{z-index:20}.flex{display:flex}.grid{display:grid}.inline-flex{display:inline-flex}.aspect-video{aspect-ratio:var(--aspect-video)}.h-1\\/3{height:33.3333%}.h-2{height:calc(var(--spacing) * 2)}.h-5{height:calc(var(--spacing) * 5)}.h-6{height:calc(var(--spacing) * 6)}.h-7{height:calc(var(--spacing) * 7)}.h-9{height:calc(var(--spacing) * 9)}.h-10{height:calc(var(--spacing) * 10)}.h-14{height:calc(var(--spacing) * 14)}.h-24{height:calc(var(--spacing) * 24)}.h-28{height:calc(var(--spacing) * 28)}.h-\\[18px\\]{height:18px}.h-full{height:100%}.max-h-20{max-height:calc(var(--spacing) * 20)}.w-2{width:calc(var(--spacing) * 2)}.w-5{width:calc(var(--spacing) * 5)}.w-6{width:calc(var(--spacing) * 6)}.w-7{width:calc(var(--spacing) * 7)}.w-9{width:calc(var(--spacing) * 9)}.w-10{width:calc(var(--spacing) * 10)}.w-14{width:calc(var(--spacing) * 14)}.w-24{width:calc(var(--spacing) * 24)}.w-\\[18px\\]{width:18px}.w-auto{width:auto}.w-full{width:100%}.flex-1{flex:1}.flex-none{flex:none}.shrink-0{flex-shrink:0}.transform{transform:var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)}.animate-pulse{animation:var(--animate-pulse)}.cursor-pointer{cursor:pointer}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.gap-0\\.5{gap:calc(var(--spacing) * .5)}.gap-1{gap:var(--spacing)}.gap-2{gap:calc(var(--spacing) * 2)}.gap-px{gap:1px}.overflow-hidden{overflow:hidden}.rounded-\\[10px\\]{border-radius:10px}.rounded-full{border-radius:2147483647px}.rounded-md{border-radius:var(--radius-md)}.\\!bg-\\[\\#ff9800\\]{background-color:#ff9800!important}.bg-\\[\\#f5222d\\]{background-color:#f5222d}.bg-black{background-color:var(--color-black)}.bg-black\\/40{background-color:#0006}@supports (color:color-mix(in lab, red, red)){.bg-black\\/40{background-color:color-mix(in oklab, var(--color-black) 40%, transparent)}}.bg-black\\/45{background-color:#00000073}@supports (color:color-mix(in lab, red, red)){.bg-black\\/45{background-color:color-mix(in oklab, var(--color-black) 45%, transparent)}}.bg-black\\/50{background-color:#00000080}@supports (color:color-mix(in lab, red, red)){.bg-black\\/50{background-color:color-mix(in oklab, var(--color-black) 50%, transparent)}}.bg-transparent{background-color:#0000}.bg-white\\/20{background-color:#fff3}@supports (color:color-mix(in lab, red, red)){.bg-white\\/20{background-color:color-mix(in oklab, var(--color-white) 20%, transparent)}}.bg-gradient-to-b{--tw-gradient-position:to bottom in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.bg-gradient-to-t{--tw-gradient-position:to top in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.from-black\\/55{--tw-gradient-from:#0000008c}@supports (color:color-mix(in lab, red, red)){.from-black\\/55{--tw-gradient-from:color-mix(in oklab, var(--color-black) 55%, transparent)}}.from-black\\/55{--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.from-black\\/70{--tw-gradient-from:#000000b3}@supports (color:color-mix(in lab, red, red)){.from-black\\/70{--tw-gradient-from:color-mix(in oklab, var(--color-black) 70%, transparent)}}.from-black\\/70{--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.via-black\\/40{--tw-gradient-via:#0006}@supports (color:color-mix(in lab, red, red)){.via-black\\/40{--tw-gradient-via:color-mix(in oklab, var(--color-black) 40%, transparent)}}.via-black\\/40{--tw-gradient-via-stops:var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-via) var(--tw-gradient-via-position), var(--tw-gradient-to) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-via-stops)}.to-transparent{--tw-gradient-to:transparent;--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.object-cover{object-fit:cover}.p-4{padding:calc(var(--spacing) * 4)}.px-2{padding-inline:calc(var(--spacing) * 2)}.px-3{padding-inline:calc(var(--spacing) * 3)}.px-4{padding-inline:calc(var(--spacing) * 4)}.py-0\\.5{padding-block:calc(var(--spacing) * .5)}.py-2\\.5{padding-block:calc(var(--spacing) * 2.5)}.pt-8{padding-top:calc(var(--spacing) * 8)}.pr-28{padding-right:calc(var(--spacing) * 28)}.pb-2{padding-bottom:calc(var(--spacing) * 2)}.pl-1{padding-left:var(--spacing)}.text-center{text-align:center}.text-sm{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height))}.text-xs{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height))}.text-\\[11px\\]{font-size:11px}.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}.font-semibold{--tw-font-weight:var(--font-weight-semibold);font-weight:var(--font-weight-semibold)}.text-ellipsis{text-overflow:ellipsis}.whitespace-nowrap{white-space:nowrap}.text-\\[color\\:var\\(--error-color\\,\\#db4437\\)\\]{color:var(--error-color,#db4437)}.text-\\[color\\:var\\(--secondary-text-color\\,\\#727272\\)\\]{color:var(--secondary-text-color,#727272)}.text-white{color:var(--color-white)}.text-white\\/60{color:#fff9}@supports (color:color-mix(in lab, red, red)){.text-white\\/60{color:color-mix(in oklab, var(--color-white) 60%, transparent)}}.opacity-0{opacity:0}.opacity-20{opacity:.2}.opacity-100{opacity:1}.shadow{--tw-shadow:0 1px 3px 0 var(--tw-shadow-color,#0000001a), 0 1px 2px -1px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.transition{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter,display,content-visibility,overlay,pointer-events;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-opacity{transition-property:opacity;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}@media (hover:hover){.group-hover\\/tap\\:scale-105:is(:where(.group\\/tap):hover *){--tw-scale-x:105%;--tw-scale-y:105%;--tw-scale-z:105%;scale:var(--tw-scale-x) var(--tw-scale-y)}.hover\\:bg-black\\/20:hover{background-color:#0003}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-black\\/20:hover{background-color:color-mix(in oklab, var(--color-black) 20%, transparent)}}.hover\\:bg-black\\/60:hover{background-color:#0009}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-black\\/60:hover{background-color:color-mix(in oklab, var(--color-black) 60%, transparent)}}.hover\\:bg-white\\/15:hover{background-color:#ffffff26}@supports (color:color-mix(in lab, red, red)){.hover\\:bg-white\\/15:hover{background-color:color-mix(in oklab, var(--color-white) 15%, transparent)}}}.disabled\\:cursor-default:disabled{cursor:default}.disabled\\:opacity-40:disabled{opacity:.4}}.cui-video{object-fit:cover!important}.cui-video:fullscreen{object-fit:contain!important}@keyframes cui-spin-rotate{to{transform:rotate(360deg)}}@keyframes cui-spin-dash{0%{stroke-dasharray:1 200;stroke-dashoffset:0}50%{stroke-dasharray:89 200;stroke-dashoffset:-35px}to{stroke-dasharray:89 200;stroke-dashoffset:-124px}}.cui-spin{transform-origin:50%;animation:2s linear infinite cui-spin-rotate}.cui-spin-circle{stroke:var(--color-cui-primary,#df2a4c);stroke-linecap:round;animation:1.5s ease-in-out infinite cui-spin-dash}.cui-ptz-pad,.cui-ptz-track{touch-action:none;cursor:grab;background:#0000008c;border-radius:9999px;box-shadow:inset 0 0 0 1px #ffffff1f}.cui-ptz-pad:active,.cui-ptz-track:active{cursor:grabbing}.cui-ptz-knob{pointer-events:none;background:#fff;border-radius:9999px;justify-content:center;align-items:center;width:1.625rem;height:1.625rem;display:flex;position:absolute;top:50%;left:50%;box-shadow:0 2px 6px #00000059}.cui-ptz-knob-icon{color:#00000059;width:.85rem;height:.85rem}.cui-ptz-mark{color:#ffffff8c;pointer-events:none;font-size:.8rem;line-height:1;position:absolute;left:50%;transform:translate(-50%)}@property --tw-rotate-x{syntax:\"*\";inherits:false}@property --tw-rotate-y{syntax:\"*\";inherits:false}@property --tw-rotate-z{syntax:\"*\";inherits:false}@property --tw-skew-x{syntax:\"*\";inherits:false}@property --tw-skew-y{syntax:\"*\";inherits:false}@property --tw-gradient-position{syntax:\"*\";inherits:false}@property --tw-gradient-from{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-via{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-to{syntax:\"<color>\";inherits:false;initial-value:#0000}@property --tw-gradient-stops{syntax:\"*\";inherits:false}@property --tw-gradient-via-stops{syntax:\"*\";inherits:false}@property --tw-gradient-from-position{syntax:\"<length-percentage>\";inherits:false;initial-value:0%}@property --tw-gradient-via-position{syntax:\"<length-percentage>\";inherits:false;initial-value:50%}@property --tw-gradient-to-position{syntax:\"<length-percentage>\";inherits:false;initial-value:100%}@property --tw-font-weight{syntax:\"*\";inherits:false}@property --tw-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-shadow-color{syntax:\"*\";inherits:false}@property --tw-shadow-alpha{syntax:\"<percentage>\";inherits:false;initial-value:100%}@property --tw-inset-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-inset-shadow-color{syntax:\"*\";inherits:false}@property --tw-inset-shadow-alpha{syntax:\"<percentage>\";inherits:false;initial-value:100%}@property --tw-ring-color{syntax:\"*\";inherits:false}@property --tw-ring-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-inset-ring-color{syntax:\"*\";inherits:false}@property --tw-inset-ring-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-ring-inset{syntax:\"*\";inherits:false}@property --tw-ring-offset-width{syntax:\"<length>\";inherits:false;initial-value:0}@property --tw-ring-offset-color{syntax:\"*\";inherits:false;initial-value:#fff}@property --tw-ring-offset-shadow{syntax:\"*\";inherits:false;initial-value:0 0 #0000}@property --tw-scale-x{syntax:\"*\";inherits:false;initial-value:1}@property --tw-scale-y{syntax:\"*\";inherits:false;initial-value:1}@property --tw-scale-z{syntax:\"*\";inherits:false;initial-value:1}@keyframes pulse{50%{opacity:.5}}", td = {
 	"/api/go2rtc": "go2rtc",
 	"/api/proxy": "rpc"
 }, nd = 4e3, rd = 4002;
