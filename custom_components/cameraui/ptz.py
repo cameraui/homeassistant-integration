@@ -7,9 +7,26 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.service import async_extract_referenced_entity_ids
 
 from .const import DOMAIN
+
+try:
+    from homeassistant.helpers.target import TargetSelection, async_extract_referenced_entity_ids
+
+    def _referenced_entity_ids(hass: HomeAssistant, call: ServiceCall) -> set[str]:
+        selected = async_extract_referenced_entity_ids(hass, TargetSelection(call.data))
+        return selected.referenced | selected.indirectly_referenced
+
+except ImportError:
+    # cores before 2025.6 only have the service helper, removed in 2026.8
+    from homeassistant.helpers.service import (
+        async_extract_referenced_entity_ids as _legacy_extract_entity_ids,
+    )
+
+    def _referenced_entity_ids(hass: HomeAssistant, call: ServiceCall) -> set[str]:
+        selected = _legacy_extract_entity_ids(hass, call)
+        return selected.referenced | selected.indirectly_referenced
+
 
 SERVICE_PTZ = "ptz"
 
@@ -59,11 +76,10 @@ def _resolve_command(data: dict[str, Any]) -> tuple[str, Any]:
 def async_setup_ptz_service(hass: HomeAssistant) -> None:
     async def handle_ptz(call: ServiceCall) -> None:
         registry = er.async_get(hass)
-        referenced = async_extract_referenced_entity_ids(hass, call)
         prop, value = _resolve_command(call.data)
 
         commanded = 0
-        for entity_id in referenced.referenced | referenced.indirectly_referenced:
+        for entity_id in _referenced_entity_ids(hass, call):
             entity = registry.async_get(entity_id)
             if (
                 not entity
