@@ -11,8 +11,8 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
-    "@camera.ui/browser": "~0.0.151",
-    "@camera.ui/sdk": "~1.2.1",
+    "@camera.ui/browser": "~0.0.153",
+    "@camera.ui/sdk": "~1.2.4",
     "@camera.ui/transport": "~0.0.25",
     "@vueuse/core": "^14.4.0",
     "vue": "^3.5.40"
