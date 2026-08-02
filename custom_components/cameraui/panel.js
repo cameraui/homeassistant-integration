@@ -1,5 +1,14 @@
 class CameraUiPanel extends HTMLElement {
   connectedCallback() {
+    const parent = this.parentElement;
+    if (
+      parent &&
+      parent.localName === 'ha-panel-custom' &&
+      !parent.style.height
+    ) {
+      parent.style.height = '100%';
+    }
+
     if (this._built) return;
     this._built = true;
 
@@ -48,7 +57,9 @@ class CameraUiPanel extends HTMLElement {
   }
 
   _mode() {
-    return this._hass && this._hass.themes && this._hass.themes.darkMode ? 'dark' : 'light';
+    return this._hass && this._hass.themes && this._hass.themes.darkMode
+      ? 'dark'
+      : 'light';
   }
 
   _lang() {
@@ -72,7 +83,8 @@ class CameraUiPanel extends HTMLElement {
     if (lang) params.set('cui_lang', lang);
     const qs = params.toString();
     const url = qs ? `${base}?${qs}` : base;
-    if (this._iframe.getAttribute('src') !== url) this._iframe.setAttribute('src', url);
+    if (this._iframe.getAttribute('src') !== url)
+      this._iframe.setAttribute('src', url);
     if (this._menu) {
       this._menu.hass = this._hass;
       this._menu.narrow = this._narrow;
