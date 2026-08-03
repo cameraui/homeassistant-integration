@@ -58,7 +58,8 @@ class CameraUiCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
                 (ident for domain, ident in device.identifiers if domain == DOMAIN),
                 None,
             )
-            if camera_id and not camera_id.startswith("sensor_") and camera_id not in cameras:
+            # sensor_* devices belong to the sensor manager, server_* is the hub
+            if camera_id and not camera_id.startswith(("sensor_", "server_")) and camera_id not in cameras:
                 _LOGGER.debug("Removing device for deleted camera %s", camera_id)
                 registry.async_update_device(device.id, remove_config_entry_id=entry_id)
 

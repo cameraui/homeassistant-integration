@@ -85,6 +85,63 @@ class CameraUiClient:
         data = await response.json()
         return data.get("sources", [])
 
+    async def get_server_versions(self) -> dict[str, Any]:
+        response = await self._request("GET", "/server/version")
+        return await response.json()
+
+    async def get_server_changelog(self, version: str) -> str | None:
+        try:
+            response = await self._request("GET", "/server/changelog", params={"version": version})
+        except CameraUiAuthError:
+            raise
+        except CameraUiApiError:
+            return None
+        return await response.text()
+
+    async def update_server(self, version: str) -> None:
+        await self._request(
+            "POST",
+            "/server/update",
+            json={"version": version},
+            timeout=aiohttp.ClientTimeout(total=1800),
+        )
+
+    async def restart_server(self) -> None:
+        await self._request("PUT", "/server/restart")
+
+    async def get_plugins(self) -> list[dict[str, Any]]:
+        response = await self._request("GET", "/plugins", params={"pageSize": "-1"})
+        data = await response.json()
+        return data.get("result", [])
+
+    async def get_plugin_update(self, plugin_name: str) -> dict[str, Any] | None:
+        try:
+            response = await self._request("GET", f"/plugins/{plugin_name}/update")
+        except CameraUiAuthError:
+            raise
+        except CameraUiApiError:
+            return None
+        return await response.json()
+
+    async def get_plugin_changelog(self, plugin_name: str, version: str | None = None) -> str | None:
+        params = {"pluginversion": version} if version else None
+        try:
+            response = await self._request("GET", f"/plugins/{plugin_name}/changelog", params=params)
+        except CameraUiAuthError:
+            raise
+        except CameraUiApiError:
+            return None
+        return await response.text()
+
+    async def install_plugin(self, plugin_name: str, version: str) -> None:
+        # installs run through the server's queue, the request waits its turn
+        await self._request(
+            "POST",
+            "/plugins",
+            json={"pluginname": plugin_name, "pluginversion": version},
+            timeout=aiohttp.ClientTimeout(total=1800),
+        )
+
     async def get_sensors(self) -> list[dict[str, Any]]:
         response = await self._request("GET", "/sensors")
         data = await response.json()

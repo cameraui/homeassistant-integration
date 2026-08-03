@@ -23,7 +23,7 @@ from .views import CameraUiProbeView, CameraUiProxyView, CameraUiSnapshotView, C
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.CAMERA, *SENSOR_PLATFORMS]
+PLATFORMS = [Platform.CAMERA, Platform.UPDATE, *SENSOR_PLATFORMS]
 
 DATA_GLOBAL_SETUP = f"{DOMAIN}_global_setup"
 
@@ -91,5 +91,7 @@ async def async_remove_config_entry_device(
         if ident in cameras:
             return False
         if ident.startswith("sensor_") and sensors.has_sensor(ident.removeprefix("sensor_")):
+            return False
+        if ident.startswith("server_"):
             return False
     return True
