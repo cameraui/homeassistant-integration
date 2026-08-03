@@ -68,7 +68,7 @@ class CameraUiConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             async with asyncio.timeout(5):
                 await session.get(f"https://{host}:{port}/api/", ssl=False)
-        except (TimeoutError, aiohttp.ClientError):
+        except TimeoutError, aiohttp.ClientError:
             return False
         return True
 

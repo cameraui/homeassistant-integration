@@ -5,10 +5,17 @@ from typing import Any
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .api import CameraUiApiError
-from .const import SIGNAL_SENSOR_ASSIGNED, SIGNAL_SENSOR_NEW, signal_sensor_remove, signal_sensor_update
+from .const import (
+    DOMAIN,
+    SIGNAL_SENSOR_ASSIGNED,
+    SIGNAL_SENSOR_NEW,
+    signal_sensor_remove,
+    signal_sensor_update,
+)
 from .coordinator import CameraUiCoordinator
 from .sensor_map import sensor_platform
 
@@ -84,7 +91,17 @@ class CameraUiSensorManager:
 
         for sensor_id in [sensor_id for sensor_id in self._sensors if sensor_id not in current]:
             self._sensors.pop(sensor_id, None)
-            async_dispatcher_send(self.hass, signal_sensor_remove(sensor_id))
+            self._remove_sensor(sensor_id)
+
+    def _remove_sensor(self, sensor_id: str) -> None:
+        async_dispatcher_send(self.hass, signal_sensor_remove(sensor_id))
+        registry = dr.async_get(self.hass)
+        device = registry.async_get_device(identifiers={(DOMAIN, f"sensor_{sensor_id}")})
+        if device:
+            registry.async_update_device(
+                device.id,
+                remove_config_entry_id=self._coordinator.config_entry.entry_id,
+            )
 
     async def _add_sensor(self, sensor_id: str) -> None:
         sensor = await self._client.get_sensor(sensor_id)
@@ -110,7 +127,7 @@ class CameraUiSensorManager:
 
         if message_type == "removed":
             if self._sensors.pop(sensor_id, None) is not None:
-                async_dispatcher_send(self.hass, signal_sensor_remove(sensor_id))
+                self._remove_sensor(sensor_id)
             return
 
         sensor = self._sensors.get(sensor_id)
@@ -124,7 +141,12 @@ class CameraUiSensorManager:
             sensor.setdefault("properties", {})[property_name] = message.get("value")
         elif message_type == "meta":
             previous_assigned = set(sensor.get("assignedCameraIds", []))
-            for key in ("displayName", "connected", "capabilities", "assignedCameraIds"):
+            for key in (
+                "displayName",
+                "connected",
+                "capabilities",
+                "assignedCameraIds",
+            ):
                 if key in message:
                     sensor[key] = message[key]
             if set(sensor.get("assignedCameraIds", [])) - previous_assigned:

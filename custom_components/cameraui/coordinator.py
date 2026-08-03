@@ -25,7 +25,13 @@ class CameraUiCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
     config_entry: CameraUiConfigEntry
 
     def __init__(self, hass: HomeAssistant, entry: CameraUiConfigEntry, client: CameraUiClient) -> None:
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=UPDATE_INTERVAL, config_entry=entry)
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=UPDATE_INTERVAL,
+            config_entry=entry,
+        )
         self.client = client
         self._detections: dict[str, dict[str, Any]] = {}
         client.on_detection(self._handle_detection)
@@ -48,8 +54,11 @@ class CameraUiCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         registry = dr.async_get(self.hass)
         entry_id = self.config_entry.entry_id
         for device in dr.async_entries_for_config_entry(registry, entry_id):
-            camera_id = next((ident for domain, ident in device.identifiers if domain == DOMAIN), None)
-            if camera_id and camera_id not in cameras:
+            camera_id = next(
+                (ident for domain, ident in device.identifiers if domain == DOMAIN),
+                None,
+            )
+            if camera_id and not camera_id.startswith("sensor_") and camera_id not in cameras:
                 _LOGGER.debug("Removing device for deleted camera %s", camera_id)
                 registry.async_update_device(device.id, remove_config_entry_id=entry_id)
 
