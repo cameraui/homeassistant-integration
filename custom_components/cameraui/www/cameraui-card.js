@@ -3135,13 +3135,13 @@ function is(e = {}) {
 	} : a;
 }
 //#endregion
-//#region ../../sdk/node/dist/plugin/api.js
+//#region node_modules/@camera.ui/sdk/dist/plugin/api.js
 var as;
 (function(e) {
 	e.FINISH_LAUNCHING = "finishLaunching", e.SHUTDOWN = "shutdown";
 })(as ||= {});
 //#endregion
-//#region ../../sdk/node/dist/plugin/contract.js
+//#region node_modules/@camera.ui/sdk/dist/plugin/contract.js
 var os;
 (function(e) {
 	e.Hub = "hub", e.SensorProvider = "sensorProvider", e.CameraController = "cameraController", e.CameraAndSensorProvider = "cameraAndSensorProvider";
@@ -3155,7 +3155,7 @@ var cs;
 	e.PublishNotifications = "publishNotifications";
 })(cs ||= {});
 //#endregion
-//#region ../../sdk/node/dist/sensor/base.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/base.js
 var X;
 (function(e) {
 	e.Motion = "motion", e.Object = "object", e.Audio = "audio", e.Face = "face", e.LicensePlate = "licensePlate", e.Classifier = "classifier", e.Clip = "clip", e.ObjectAssist = "objectAssist", e.Contact = "contact", e.Temperature = "temperature", e.Humidity = "humidity", e.Occupancy = "occupancy", e.Smoke = "smoke", e.Leak = "leak", e.Gas = "gas", e.CarbonMonoxide = "carbonMonoxide", e.Heat = "heat", e.Cold = "cold", e.Vibration = "vibration", e.Tamper = "tamper", e.Problem = "problem", e.Power = "power", e.Illuminance = "illuminance", e.CarbonDioxide = "carbonDioxide", e.Light = "light", e.Siren = "siren", e.Switch = "switch", e.Lock = "lock", e.PTZ = "ptz", e.SecuritySystem = "securitySystem", e.Garage = "garage", e.Doorbell = "doorbell", e.Battery = "battery";
@@ -3165,25 +3165,25 @@ var Z;
 	e.Sensor = "sensor", e.Control = "control", e.Trigger = "trigger", e.Info = "info";
 })(Z ||= {});
 //#endregion
-//#region ../../sdk/node/dist/plugin/notifier.js
+//#region node_modules/@camera.ui/sdk/dist/plugin/notifier.js
 var ls;
 (function(e) {
 	e.Info = "info", e.Warn = "warn", e.Error = "error", e.Critical = "critical";
 })(ls ||= {});
 //#endregion
-//#region ../../sdk/node/dist/sensor/meta.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/meta.js
 var Q;
 (function(e) {
 	e.Binary = "binary", e.Measurement = "measurement", e.Switch = "switch", e.Light = "light", e.Siren = "siren", e.Lock = "lock", e.Cover = "cover", e.Alarm = "alarm";
 })(Q ||= {});
 //#endregion
-//#region ../../sdk/node/dist/sensor/audio.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/audio.js
 var us;
 (function(e) {
 	e.Detected = "detected", e.Detections = "detections", e.Decibels = "decibels", e.LastTriggered = "lastTriggered";
 })(us ||= {}), X.Audio, Z.Sensor, us.Detected, us.Detections, us.Decibels, us.LastTriggered;
 //#endregion
-//#region ../../sdk/node/dist/sensor/battery.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/battery.js
 var ds;
 (function(e) {
 	e.LowBattery = "lowBattery", e.Charging = "charging";
@@ -3197,49 +3197,49 @@ var ps;
 	e.NotChargeable = "NOT_CHARGEABLE", e.NotCharging = "NOT_CHARGING", e.Charging = "CHARGING", e.Full = "FULL";
 })(ps ||= {}), X.Battery, Z.Info, fs.Level, fs.Charging, ps.NotChargeable, ps.NotCharging, ps.Charging, ps.Full, fs.Low, fs.Charging, ds.Charging, fs.Low, ds.LowBattery, Q.Measurement, fs.Level, fs.Level;
 //#endregion
-//#region ../../sdk/node/dist/sensor/carbonDioxide.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/carbonDioxide.js
 var ms;
 (function(e) {
 	e.Current = "current";
 })(ms ||= {}), X.CarbonDioxide, Z.Info, ms.Current, ms.Current, Q.Measurement, ms.Current, ms.Current;
 //#endregion
-//#region ../../sdk/node/dist/sensor/carbonMonoxide.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/carbonMonoxide.js
 var hs;
 (function(e) {
 	e.Detected = "detected";
 })(hs ||= {}), X.CarbonMonoxide, Z.Sensor, hs.Detected, hs.Detected, hs.Detected, Q.Binary, hs.Detected, hs.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/classifier.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/classifier.js
 var gs;
 (function(e) {
 	e.Detected = "detected", e.Detections = "detections", e.Labels = "labels";
 })(gs ||= {}), X.Classifier, Z.Sensor, gs.Detected, gs.Detections, gs.Labels, X.Clip, Z.Sensor;
 //#endregion
-//#region ../../sdk/node/dist/sensor/cold.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/cold.js
 var _s;
 (function(e) {
 	e.Detected = "detected";
 })(_s ||= {}), X.Cold, Z.Sensor, _s.Detected, _s.Detected, _s.Detected, Q.Binary, _s.Detected, _s.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/contact.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/contact.js
 var vs;
 (function(e) {
 	e.Detected = "detected";
 })(vs ||= {}), X.Contact, Z.Sensor, vs.Detected, vs.Detected, vs.Detected, Q.Binary, vs.Detected, vs.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/doorbell.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/doorbell.js
 var ys;
 (function(e) {
 	e.Ring = "ring";
 })(ys ||= {}), X.Doorbell, Z.Trigger, ys.Ring, ys.Ring, ys.Ring, Q.Binary, ys.Ring, ys.Ring;
 //#endregion
-//#region ../../sdk/node/dist/sensor/face.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/face.js
 var bs;
 (function(e) {
 	e.Detected = "detected", e.Detections = "detections";
 })(bs ||= {}), X.Face, Z.Sensor, bs.Detected, bs.Detections;
 //#endregion
-//#region ../../sdk/node/dist/sensor/garage.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/garage.js
 var xs;
 (function(e) {
 	e[e.Open = 0] = "Open", e[e.Closed = 1] = "Closed", e[e.Opening = 2] = "Opening", e[e.Closing = 3] = "Closing", e[e.Stopped = 4] = "Stopped";
@@ -3249,43 +3249,43 @@ var Ss;
 	e.CurrentState = "currentState", e.TargetState = "targetState", e.ObstructionDetected = "obstructionDetected";
 })(Ss ||= {}), X.Garage, Z.Control, Ss.CurrentState, xs.Open, xs.Closed, xs.Opening, xs.Closing, xs.Stopped, Ss.TargetState, xs.Open, xs.Closed, Ss.ObstructionDetected, Ss.CurrentState, Ss.CurrentState, Ss.TargetState, Q.Cover, Ss.CurrentState, Ss.TargetState, xs.Open, xs.Closed, xs.Opening, xs.Closing, xs.Stopped;
 //#endregion
-//#region ../../sdk/node/dist/sensor/gas.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/gas.js
 var Cs;
 (function(e) {
 	e.Detected = "detected";
 })(Cs ||= {}), X.Gas, Z.Sensor, Cs.Detected, Cs.Detected, Cs.Detected, Q.Binary, Cs.Detected, Cs.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/heat.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/heat.js
 var ws;
 (function(e) {
 	e.Detected = "detected";
 })(ws ||= {}), X.Heat, Z.Sensor, ws.Detected, ws.Detected, ws.Detected, Q.Binary, ws.Detected, ws.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/humidity.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/humidity.js
 var Ts;
 (function(e) {
 	e.Current = "current";
 })(Ts ||= {}), X.Humidity, Z.Info, Ts.Current, Ts.Current, Q.Measurement, Ts.Current, Ts.Current;
 //#endregion
-//#region ../../sdk/node/dist/sensor/illuminance.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/illuminance.js
 var Es;
 (function(e) {
 	e.Current = "current";
 })(Es ||= {}), X.Illuminance, Z.Info, Es.Current, Es.Current, Q.Measurement, Es.Current, Es.Current;
 //#endregion
-//#region ../../sdk/node/dist/sensor/leak.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/leak.js
 var Ds;
 (function(e) {
 	e.Detected = "detected";
 })(Ds ||= {}), X.Leak, Z.Sensor, Ds.Detected, Ds.Detected, Ds.Detected, Q.Binary, Ds.Detected, Ds.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/licensePlate.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/licensePlate.js
 var Os;
 (function(e) {
 	e.Detected = "detected", e.Detections = "detections";
 })(Os ||= {}), X.LicensePlate, Z.Sensor, Os.Detected, Os.Detections;
 //#endregion
-//#region ../../sdk/node/dist/sensor/light.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/light.js
 var ks;
 (function(e) {
 	e.Brightness = "brightness";
@@ -3295,7 +3295,7 @@ var As;
 	e.On = "on", e.Brightness = "brightness";
 })(As ||= {}), X.Light, Z.Control, As.On, As.Brightness, As.On, As.Brightness, ks.Brightness, As.On, As.Brightness, ks.Brightness, Q.Light, As.On, As.On;
 //#endregion
-//#region ../../sdk/node/dist/sensor/lock.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/lock.js
 var js;
 (function(e) {
 	e[e.Secured = 0] = "Secured", e[e.Unsecured = 1] = "Unsecured", e[e.Unknown = 2] = "Unknown";
@@ -3305,37 +3305,37 @@ var Ms;
 	e.CurrentState = "currentState", e.TargetState = "targetState";
 })(Ms ||= {}), X.Lock, Z.Control, Ms.CurrentState, js.Secured, js.Unsecured, js.Unknown, Ms.TargetState, js.Secured, js.Unsecured, Ms.CurrentState, Ms.CurrentState, Ms.TargetState, Q.Lock, Ms.CurrentState, Ms.TargetState, js.Secured, js.Unsecured;
 //#endregion
-//#region ../../sdk/node/dist/sensor/motion.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/motion.js
 var Ns;
 (function(e) {
 	e.Detected = "detected", e.Detections = "detections", e.Blocked = "blocked", e.LastTriggered = "lastTriggered";
 })(Ns ||= {}), X.Motion, Z.Sensor, Ns.Detected, Ns.Detections, Ns.Blocked, Ns.LastTriggered;
 //#endregion
-//#region ../../sdk/node/dist/sensor/object.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/object.js
 var Ps;
 (function(e) {
 	e.Detected = "detected", e.Detections = "detections", e.Labels = "labels";
 })(Ps ||= {}), X.Object, Z.Sensor, Ps.Detected, Ps.Detections, Ps.Labels, X.ObjectAssist, Z.Sensor;
 //#endregion
-//#region ../../sdk/node/dist/sensor/occupancy.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/occupancy.js
 var Fs;
 (function(e) {
 	e.Detected = "detected";
 })(Fs ||= {}), X.Occupancy, Z.Sensor, Fs.Detected, Fs.Detected, Fs.Detected, Q.Binary, Fs.Detected, Fs.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/power.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/power.js
 var Is;
 (function(e) {
 	e.Detected = "detected";
 })(Is ||= {}), X.Power, Z.Sensor, Is.Detected, Is.Detected, Is.Detected, Q.Binary, Is.Detected, Is.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/problem.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/problem.js
 var Ls;
 (function(e) {
 	e.Detected = "detected";
 })(Ls ||= {}), X.Problem, Z.Sensor, Ls.Detected, Ls.Detected, Ls.Detected, Q.Binary, Ls.Detected, Ls.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/ptz.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/ptz.js
 var Rs;
 (function(e) {
 	e.Pan = "pan", e.Tilt = "tilt", e.Zoom = "zoom", e.Presets = "presets", e.Home = "home", e.RelativeMove = "relativeMove", e.AbsolutePosition = "absolutePosition", e.VelocityControl = "velocityControl";
@@ -3345,7 +3345,7 @@ var zs;
 	e.Position = "position", e.Moving = "moving", e.Presets = "presets", e.Velocity = "velocity", e.TargetPreset = "targetPreset", e.RelativeMove = "relativeMove", e.Home = "home";
 })(zs ||= {}), X.PTZ, Z.Control, zs.Position, zs.Moving, zs.Presets, zs.Velocity, zs.TargetPreset, zs.RelativeMove, zs.Home;
 //#endregion
-//#region ../../sdk/node/dist/sensor/securitySystem.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/securitySystem.js
 var Bs;
 (function(e) {
 	e[e.StayArm = 0] = "StayArm", e[e.AwayArm = 1] = "AwayArm", e[e.NightArm = 2] = "NightArm", e[e.Disarmed = 3] = "Disarmed", e[e.AlarmTriggered = 4] = "AlarmTriggered";
@@ -3355,7 +3355,7 @@ var Vs;
 	e.CurrentState = "currentState", e.TargetState = "targetState";
 })(Vs ||= {}), X.SecuritySystem, Z.Control, Vs.CurrentState, Bs.StayArm, Bs.AwayArm, Bs.NightArm, Bs.Disarmed, Bs.AlarmTriggered, Vs.TargetState, Bs.StayArm, Bs.AwayArm, Bs.NightArm, Bs.Disarmed, Vs.CurrentState, Vs.CurrentState, Vs.TargetState, Q.Alarm, Vs.CurrentState, Vs.TargetState, Bs.StayArm, Bs.AwayArm, Bs.NightArm, Bs.Disarmed, Bs.AlarmTriggered;
 //#endregion
-//#region ../../sdk/node/dist/sensor/siren.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/siren.js
 var Hs;
 (function(e) {
 	e.Volume = "volume";
@@ -3365,31 +3365,31 @@ var Us;
 	e.Active = "active", e.Volume = "volume";
 })(Us ||= {}), X.Siren, Z.Control, Us.Active, Us.Volume, Us.Active, Us.Volume, Hs.Volume, Us.Active, Us.Volume, Hs.Volume, Q.Siren, Us.Active, Us.Active;
 //#endregion
-//#region ../../sdk/node/dist/sensor/smoke.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/smoke.js
 var Ws;
 (function(e) {
 	e.Detected = "detected";
 })(Ws ||= {}), X.Smoke, Z.Sensor, Ws.Detected, Ws.Detected, Ws.Detected, Q.Binary, Ws.Detected, Ws.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/switch.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/switch.js
 var Gs;
 (function(e) {
 	e.On = "on";
 })(Gs ||= {}), X.Switch, Z.Control, Gs.On, Gs.On, Gs.On, Q.Switch, Gs.On, Gs.On;
 //#endregion
-//#region ../../sdk/node/dist/sensor/tamper.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/tamper.js
 var Ks;
 (function(e) {
 	e.Detected = "detected";
 })(Ks ||= {}), X.Tamper, Z.Sensor, Ks.Detected, Ks.Detected, Ks.Detected, Q.Binary, Ks.Detected, Ks.Detected;
 //#endregion
-//#region ../../sdk/node/dist/sensor/temperature.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/temperature.js
 var qs;
 (function(e) {
 	e.Current = "current";
 })(qs ||= {}), X.Temperature, Z.Info, qs.Current, qs.Current, Q.Measurement, qs.Current, qs.Current;
 //#endregion
-//#region ../../sdk/node/dist/sensor/vibration.js
+//#region node_modules/@camera.ui/sdk/dist/sensor/vibration.js
 var Js;
 (function(e) {
 	e.Detected = "detected";
