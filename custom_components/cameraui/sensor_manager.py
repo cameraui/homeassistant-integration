@@ -79,7 +79,7 @@ class CameraUiSensorManager:
                 _LOGGER.debug("Sensor fetch failed: %s", err)
             return
 
-        current = {sensor["id"]: sensor for sensor in fetched if sensor.get("id") and sensor.get("exposed")}
+        current = {sensor["id"]: sensor for sensor in fetched if sensor.get("id") and sensor.get("exposed") and sensor.get("origin") != "homeassistant"}
 
         for sensor_id, sensor in current.items():
             existed = sensor_id in self._sensors
@@ -105,7 +105,7 @@ class CameraUiSensorManager:
 
     async def _add_sensor(self, sensor_id: str) -> None:
         sensor = await self._client.get_sensor(sensor_id)
-        if not sensor or not sensor.get("exposed"):
+        if not sensor or not sensor.get("exposed") or sensor.get("origin") == "homeassistant":
             return
         existed = sensor_id in self._sensors
         self._sensors[sensor_id] = sensor
