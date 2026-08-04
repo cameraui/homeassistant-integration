@@ -3541,12 +3541,6 @@ var $s = class {
 	static sensorProviderNamespaces(e, t) {
 		return { sensorRpc: `plugin.${e}.sensor.${t}.rpc` };
 	}
-	static legacySensorNamespaces(e) {
-		return {
-			sensorSubject: `camera.${e}.sensors.subject`,
-			sensorRpc: `camera.${e}.sensors.rpc`
-		};
-	}
 	static frameWorkerDetectionNamespaces(e) {
 		return { detectionRpc: `camera.${e}.frameWorker.detection.rpc` };
 	}
@@ -3875,7 +3869,7 @@ function Dc() {
 		e();
 	} catch {}
 }
-X.Light, X.Siren, X.Battery, X.Doorbell, X.Contact, X.Motion, X.Object, X.Audio, X.Face, X.LicensePlate, X.Classifier, X.PTZ, X.Switch, X.Lock, X.SecuritySystem, X.Temperature, X.Humidity, X.Occupancy, X.Smoke, X.Leak, X.Garage;
+X.Light, X.Siren, X.Battery, X.Doorbell, X.Contact, X.Motion, X.Object, X.Audio, X.Face, X.LicensePlate, X.Classifier, X.PTZ, X.Switch, X.Lock, X.SecuritySystem, X.Temperature, X.Humidity, X.Occupancy, X.Smoke, X.Leak, X.Gas, X.CarbonMonoxide, X.Heat, X.Cold, X.Vibration, X.Tamper, X.Problem, X.Power, X.Illuminance, X.CarbonDioxide, X.Garage;
 var Oc = Ys({
 	releaseDelay: 1e3,
 	onRelease: (e, t) => t.manager.close()
