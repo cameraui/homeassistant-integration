@@ -9,7 +9,10 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+    DataUpdateCoordinator,
+)
 
 from .api import CameraUiApiError, CameraUiClient
 from .const import DOMAIN
@@ -67,7 +70,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: Any, async_add_entities:
     # the registry does not reliably pick up a changed name from device_info
     # on existing devices — rename explicitly (name_by_user still wins)
     registry = dr.async_get(hass)
-    if (existing := registry.async_get_device(identifiers={(DOMAIN, f"server_{entry.entry_id}")})) and existing.name != device["name"]:
+    if (
+        existing := registry.async_get_device(identifiers={(DOMAIN, f"server_{entry.entry_id}")})
+    ) and existing.name != device["name"]:
         registry.async_update_device(existing.id, name=device["name"])
 
     entities: list[UpdateEntity] = [CameraUiServerUpdateEntity(coordinator, entry, device)]
@@ -149,7 +154,13 @@ class CameraUiPluginUpdateEntity(CoordinatorEntity[CameraUiUpdateCoordinator], U
     _attr_has_entity_name = True
     _attr_supported_features = UpdateEntityFeature.INSTALL | UpdateEntityFeature.RELEASE_NOTES
 
-    def __init__(self, coordinator: CameraUiUpdateCoordinator, entry: Any, device: DeviceInfo, plugin_name: str) -> None:
+    def __init__(
+        self,
+        coordinator: CameraUiUpdateCoordinator,
+        entry: Any,
+        device: DeviceInfo,
+        plugin_name: str,
+    ) -> None:
         super().__init__(coordinator)
         self._plugin_name = plugin_name
         self._attr_unique_id = f"{entry.entry_id}_plugin_update_{plugin_name}"
@@ -175,7 +186,7 @@ class CameraUiPluginUpdateEntity(CoordinatorEntity[CameraUiUpdateCoordinator], U
         return self._plugin.get("latest")
 
     async def async_release_notes(self) -> str | None:
-        return await self.coordinator.client.get_plugin_changelog(self._plugin_name)
+        return await self.coordinator.client.get_plugin_changelog(self._plugin_name, self.latest_version)
 
     async def async_install(self, version: str | None, backup: bool, **kwargs: Any) -> None:
         target = version or self.latest_version
