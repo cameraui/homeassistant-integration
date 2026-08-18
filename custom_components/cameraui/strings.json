@@ -59,9 +59,6 @@
       },
       "object_animal": {
         "name": "Animal"
-      },
-      "object_package": {
-        "name": "Package"
       }
     },
     "sensor": {

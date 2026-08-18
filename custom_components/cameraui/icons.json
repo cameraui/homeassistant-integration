@@ -3,8 +3,7 @@
     "binary_sensor": {
       "object_person": { "default": "mdi:account" },
       "object_vehicle": { "default": "mdi:car" },
-      "object_animal": { "default": "mdi:paw" },
-      "object_package": { "default": "mdi:package-variant-closed" }
+      "object_animal": { "default": "mdi:paw" }
     },
     "sensor": {
       "face": { "default": "mdi:face-recognition" },
