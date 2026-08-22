@@ -79,7 +79,11 @@ class CameraUiSensorManager:
                 _LOGGER.debug("Sensor fetch failed: %s", err)
             return
 
-        current = {sensor["id"]: sensor for sensor in fetched if sensor.get("id") and sensor.get("exposed") and sensor.get("origin") != "homeassistant"}
+        current = {
+            sensor["id"]: sensor
+            for sensor in fetched
+            if sensor.get("id") and sensor.get("exposed") and sensor.get("origin") != "homeassistant"
+        }
 
         for sensor_id, sensor in current.items():
             existed = sensor_id in self._sensors

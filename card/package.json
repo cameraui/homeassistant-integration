@@ -11,14 +11,14 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
-    "@camera.ui/browser": "~0.0.172",
+    "@camera.ui/browser": "~0.0.173",
     "@camera.ui/sdk": "~1.2.30",
     "@camera.ui/transport": "~0.0.26",
     "@vueuse/core": "^14.4.0",
     "vue": "^3.5.41"
   },
   "devDependencies": {
-    "@iconify/json": "^2.2.518",
+    "@iconify/json": "^2.2.519",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tsconfig/node24": "^24.0.5",
@@ -36,7 +36,7 @@
     "unplugin-auto-import": "^21.1.0",
     "unplugin-icons": "^23.0.1",
     "unplugin-vue-components": "^32.1.0",
-    "vite": "8.2.1",
-    "vue-tsc": "^3.3.10"
+    "vite": "8.2.2",
+    "vue-tsc": "^3.3.11"
   }
 }
