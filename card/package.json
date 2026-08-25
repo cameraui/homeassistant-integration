@@ -18,11 +18,11 @@
     "vue": "^3.5.41"
   },
   "devDependencies": {
-    "@iconify/json": "^2.2.519",
+    "@iconify/json": "^2.2.520",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tsconfig/node24": "^24.0.5",
-    "@types/node": "26.2.0",
+    "@types/node": "26.3.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.9.0",
