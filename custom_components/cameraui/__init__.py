@@ -35,6 +35,7 @@ from .views import (
     CameraUiCardsAssetView,
     CameraUiCardsFontView,
     CameraUiMediaView,
+    CameraUiNotifyAssetView,
     CameraUiProxyView,
 )
 
@@ -64,6 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: CameraUiConfigEntry) -> 
         hass.http.register_view(CameraUiCardsAssetView)
         hass.http.register_view(CameraUiCardsFontView)
         hass.http.register_view(CameraUiMediaView)
+        hass.http.register_view(CameraUiNotifyAssetView)
         async_setup_ptz_service(hass)
         await async_register_panel_static(hass)
 

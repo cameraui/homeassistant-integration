@@ -205,6 +205,35 @@ class CameraUiCardsFontView(HomeAssistantView):
             return _asset_response(200, None, cached, FONT_CONTENT_TYPE)
 
 
+class CameraUiNotifyAssetView(HomeAssistantView):
+    name = "api:cameraui:notify"
+    url = "/api/cameraui/notify/{path:.*}"
+    requires_auth = True
+
+    async def get(self, request: web.Request, path: str) -> web.Response:
+        hass = request.app[KEY_HASS]
+        session = async_get_clientsession(hass, verify_ssl=False)
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            if entry.state is not ConfigEntryState.LOADED:
+                continue
+            upstream_url = URL.build(
+                scheme="https", host=entry.data[CONF_HOST], port=entry.data[CONF_PORT], path=f"/{path}"
+            )
+            try:
+                async with session.get(upstream_url) as upstream:
+                    if upstream.status != 200:
+                        continue
+                    body = await upstream.read()
+                    return web.Response(
+                        body=body,
+                        content_type=upstream.content_type,
+                        headers={hdrs.CACHE_CONTROL: "private, max-age=600"},
+                    )
+            except aiohttp.ClientError:
+                continue
+        raise web.HTTPNotFound
+
+
 class CameraUiMediaView(HomeAssistantView):
     name = "api:cameraui:media"
     url = "/api/cameraui/media/{entry_id}/{kind}/{path:.*}"
