@@ -8,13 +8,15 @@
   "dependencies": [
     "frontend",
     "http",
-    "lovelace"
+    "lovelace",
+    "media_source"
   ],
   "documentation": "https://github.com/cameraui/homeassistant-integration",
   "integration_type": "hub",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/cameraui/homeassistant-integration/issues",
   "requirements": [
+    "camera-ui-rpc==1.0.9",
     "python-socketio==5.16.3"
   ],
   "version": "0.3.8",

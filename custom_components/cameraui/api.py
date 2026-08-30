@@ -48,13 +48,25 @@ class CameraUiClient:
             response = await self._session.request(
                 method, f"{self.base_url}/api{path}", headers=headers, ssl=False, **kwargs
             )
-        except aiohttp.ClientError as err:
+        except (aiohttp.ClientError, RuntimeError) as err:
+            # RuntimeError: the shared session is already closed while HA shuts down
             raise CameraUiApiError(f"Request to {path} failed: {err}") from err
         if response.status in (401, 403):
             raise CameraUiAuthError(f"Authentication failed ({response.status})", status=response.status)
         if response.status >= 400:
             raise CameraUiApiError(f"Request to {path} returned {response.status}", status=response.status)
         return response
+
+    # servers older than the cards bundle answer 404 here, the integration then skips the resource;
+    # the returned tag changes with every build so Lovelace refetches the bundle
+    async def cards_bundle_tag(self) -> str | None:
+        try:
+            response = await self._session.head(f"{self.base_url}/ha/cameraui-cards.js", ssl=False)
+        except aiohttp.ClientError:
+            return None
+        if response.status != 200:
+            return None
+        return bundle_tag(response.headers)
 
     async def get_info(self) -> dict[str, Any]:
         try:
@@ -217,3 +229,9 @@ class CameraUiClient:
             sio = self._sio
             self._sio = None
             await sio.disconnect()
+
+
+def bundle_tag(headers: Any) -> str:
+    raw = headers.get("ETag") or headers.get("Last-Modified") or ""
+    tag = "".join(ch for ch in raw if ch.isalnum())[-12:]
+    return tag or "0"

@@ -15,7 +15,7 @@ class CameraUiPanel extends HTMLElement {
     const root = this.attachShadow({ mode: 'open' });
     root.innerHTML = `
       <style>
-        :host { display: flex; flex-direction: column; height: 100%; background: #0d0d0d; color-scheme: light dark; }
+        :host { display: flex; flex-direction: column; height: 100vh; height: 100dvh; background: #0d0d0d; color-scheme: light dark; }
         .bar { display: none; align-items: center; height: 48px; padding: 0 4px; }
         :host([narrow]) .bar { display: flex; }
         iframe { flex: 1; border: 0; width: 100%; background: #0d0d0d; color-scheme: light dark; }
@@ -32,6 +32,7 @@ class CameraUiPanel extends HTMLElement {
       this._loaded = true;
       this._postTheme();
       this._postLang();
+      this._postRoute();
     });
     this._menu = document.createElement('ha-menu-button');
     root.querySelector('.bar').appendChild(this._menu);
@@ -47,6 +48,17 @@ class CameraUiPanel extends HTMLElement {
     this._hass = hass;
     if (this._menu) this._menu.hass = hass;
     this._sync();
+  }
+
+  // HA hands the panel only the path, the query (startTs deep links) stays in the location
+  set route(route) {
+    const base = route && typeof route.path === 'string' ? route.path : '';
+    const path = base ? `${base}${window.location.search || ''}` : '';
+    if (path === this._routePath) return;
+    this._routePath = path;
+    if (!this._iframe) return;
+    if (!this._iframe.getAttribute('src')) this._apply();
+    else if (this._loaded) this._postRoute();
   }
 
   set narrow(narrow) {
@@ -72,19 +84,26 @@ class CameraUiPanel extends HTMLElement {
     if (this._iframe) this._iframe.style.background = bg;
   }
 
+  _appPath() {
+    const path = this._routePath || '';
+    return path.replace(/^\/+/, '');
+  }
+
+  // the src is set once; later route changes go through postMessage so the app keeps its state
   _apply() {
     if (!this._iframe || !this._panel) return;
     const mode = this._hass ? this._mode() : null;
     if (mode) this._applyBg(mode);
-    const base = (this._panel.config && this._panel.config.proxyUrl) || '/';
-    const params = new URLSearchParams();
-    if (mode) params.set('cui_theme', mode);
-    const lang = this._lang();
-    if (lang) params.set('cui_lang', lang);
-    const qs = params.toString();
-    const url = qs ? `${base}?${qs}` : base;
-    if (this._iframe.getAttribute('src') !== url)
-      this._iframe.setAttribute('src', url);
+    if (!this._iframe.getAttribute('src')) {
+      const base = (this._panel.config && this._panel.config.proxyUrl) || '/';
+      // the route may carry its own query (startTs deep links), merge instead of appending a second '?'
+      const url = new URL(`${base}${this._appPath()}`, window.location.origin);
+      if (mode) url.searchParams.set('cui_theme', mode);
+      const lang = this._lang();
+      if (lang) url.searchParams.set('cui_lang', lang);
+      this._postedPath = this._routePath || '';
+      this._iframe.setAttribute('src', `${url.pathname}${url.search}`);
+    }
     if (this._menu) {
       this._menu.hass = this._hass;
       this._menu.narrow = this._narrow;
@@ -113,6 +132,13 @@ class CameraUiPanel extends HTMLElement {
     if (!language || language === this._postedLang) return;
     this._postedLang = language;
     this._post({ type: 'cui:language', language });
+  }
+
+  _postRoute() {
+    const path = this._routePath || '';
+    if (path === this._postedPath) return;
+    this._postedPath = path;
+    this._post({ type: 'cui:navigate', path: path || '/' });
   }
 
   _post(message) {

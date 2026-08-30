@@ -5,17 +5,14 @@
   "description": "camera.ui home assistant integration",
   "type": "module",
   "scripts": {
-    "audit": "npm audit fix && npm --prefix card audit fix",
-    "build": "npm --prefix card run build",
-    "format:card": "npm --prefix card run format",
+    "audit": "npm audit fix",
     "format:python": "cd custom_components && ruff format && cd ..",
-    "format": "npm run format:card && npm run format:python",
-    "install-updates": "npm i --save && npm run install-updates --if-present --prefix card",
-    "lint:card": "npm --prefix card run lint && npm --prefix card run type-check",
+    "format": "npm run format:python",
+    "install-updates": "npm i --save",
     "lint:python": "cd custom_components && ruff check --fix && uv run --quiet --python 3.14 --with-requirements ../requirements-dev.txt mypy --config-file ./mypy.ini cameraui && cd ..",
-    "lint": "npm run lint:card && npm run lint:python",
+    "lint": "npm run lint:python",
     "release": "bash scripts/release.sh",
-    "update": "updates --update ./ && updates --file card --update ./"
+    "update": "updates --update ./"
   },
   "homepage": "https://github.com/cameraui/homeassistant-integration#readme",
   "bugs": {

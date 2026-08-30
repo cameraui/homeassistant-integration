@@ -40,7 +40,7 @@ class CameraUiCamera(CameraUiEntity, Camera):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        # the cameraui-card reads these to open the proxied go2rtc stream + show the PTZ overlay
+        # the dashboard cards read these to find their camera.ui entry and camera
         attrs: dict[str, Any] = {
             "camera_name": self.camera_data.get("name"),
             "entry_id": self.coordinator.config_entry.entry_id,

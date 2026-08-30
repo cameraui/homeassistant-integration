@@ -1,3 +1,4 @@
 homeassistant==2026.7.2
 python-socketio==5.16.3
+camera-ui-rpc==1.0.9
 mypy==2.1.0

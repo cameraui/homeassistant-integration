@@ -107,5 +107,42 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "camera.ui-Optionen",
+        "description": "Wer die camera.ui-Dashboard-Karten nutzen darf. Administratoren nutzen das API-Token der Integration. Andere Benutzer nutzen das Viewer-Token unten, ohne Viewer-Token das Integrations-Token. Die Clip-Qualität gilt für Aufnahmen aus dem Medienbrowser.",
+        "data": {
+          "card_access": "Kartenzugriff",
+          "viewer_token": "Viewer-Token (optional)",
+          "clip_quality": "Clip-Qualität (Medienbrowser)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Das Viewer-Token wurde abgelehnt.",
+      "cannot_connect": "Verbindung zum Server nicht möglich."
+    }
+  },
+  "selector": {
+    "card_access": {
+      "options": {
+        "admins": "Nur Administratoren",
+        "all_users": "Alle Home-Assistant-Benutzer"
+      }
+    },
+    "clip_quality": {
+      "options": {
+        "low": "Substream, klein und schnell",
+        "high": "Hauptstream, volle Qualität"
+      }
+    }
+  },
+  "issues": {
+    "server_outdated": {
+      "title": "camera.ui auf {host} ist veraltet",
+      "description": "camera.ui auf {host} läuft mit Version {version}. Dashboard-Karten und die automatische Anmeldung im Seitenleisten-Panel brauchen {min_version} oder neuer. Entities funktionieren weiter. camera.ui aktualisieren, dann die Integration neu laden."
+    }
   }
 }

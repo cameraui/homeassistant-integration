@@ -6,13 +6,33 @@ from typing import Any
 
 import aiohttp
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .api import CameraUiApiError, CameraUiAuthError, CameraUiClient
-from .const import CONF_TOKEN, DEFAULT_PORT, DOMAIN
+from .const import (
+    CARD_ACCESS_ADMINS,
+    CARD_ACCESS_ALL,
+    CLIP_QUALITY_HIGH,
+    CLIP_QUALITY_LOW,
+    CONF_CARD_ACCESS,
+    CONF_CLIP_QUALITY,
+    CONF_TOKEN,
+    CONF_VIEWER_TOKEN,
+    DEFAULT_PORT,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +53,11 @@ class CameraUiConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._host: str | None = None
         self._port: int = DEFAULT_PORT
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> CameraUiOptionsFlow:
+        return CameraUiOptionsFlow()
 
     async def _validate(self, host: str, port: int, token: str) -> tuple[dict[str, str], dict[str, Any]]:
         errors: dict[str, str] = {}
@@ -161,3 +186,59 @@ class CameraUiConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=self.add_suggested_values_to_schema(STEP_USER_SCHEMA, entry.data),
             errors=errors,
         )
+
+
+class CameraUiOptionsFlow(OptionsFlow):
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        entry = self.config_entry
+
+        if user_input is not None:
+            viewer = (user_input.get(CONF_VIEWER_TOKEN) or "").strip()
+            if viewer:
+                client = CameraUiClient(
+                    entry.data[CONF_HOST],
+                    entry.data[CONF_PORT],
+                    viewer,
+                    async_get_clientsession(self.hass, verify_ssl=False),
+                )
+                try:
+                    await client.validate()
+                except CameraUiAuthError:
+                    errors[CONF_VIEWER_TOKEN] = "invalid_auth"
+                except CameraUiApiError:
+                    errors["base"] = "cannot_connect"
+            if not errors:
+                data = {
+                    CONF_CARD_ACCESS: user_input[CONF_CARD_ACCESS],
+                    CONF_CLIP_QUALITY: user_input[CONF_CLIP_QUALITY],
+                }
+                if viewer:
+                    data[CONF_VIEWER_TOKEN] = viewer
+                return self.async_create_entry(title="", data=data)
+
+        current = entry.options.get(CONF_CARD_ACCESS, CARD_ACCESS_ADMINS)
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_CARD_ACCESS, default=current): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[CARD_ACCESS_ADMINS, CARD_ACCESS_ALL],
+                        mode=SelectSelectorMode.DROPDOWN,
+                        translation_key=CONF_CARD_ACCESS,
+                    )
+                ),
+                vol.Optional(
+                    CONF_VIEWER_TOKEN, default=entry.options.get(CONF_VIEWER_TOKEN, "")
+                ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
+                vol.Required(
+                    CONF_CLIP_QUALITY, default=entry.options.get(CONF_CLIP_QUALITY, CLIP_QUALITY_LOW)
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[CLIP_QUALITY_LOW, CLIP_QUALITY_HIGH],
+                        mode=SelectSelectorMode.DROPDOWN,
+                        translation_key=CONF_CLIP_QUALITY,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

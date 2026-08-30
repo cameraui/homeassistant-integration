@@ -107,5 +107,42 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "camera.ui options",
+        "description": "Who may use the camera.ui dashboard cards. Administrators use the integration's API token. Other users use the viewer token below, or the integration token if none is set. The clip quality applies to recordings played from the media browser.",
+        "data": {
+          "card_access": "Card access",
+          "viewer_token": "Viewer token (optional)",
+          "clip_quality": "Clip quality (media browser)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The viewer token was rejected.",
+      "cannot_connect": "Cannot connect to the server."
+    }
+  },
+  "selector": {
+    "card_access": {
+      "options": {
+        "admins": "Administrators only",
+        "all_users": "All Home Assistant users"
+      }
+    },
+    "clip_quality": {
+      "options": {
+        "low": "Sub stream, small and fast",
+        "high": "Main stream, full quality"
+      }
+    }
+  },
+  "issues": {
+    "server_outdated": {
+      "title": "camera.ui at {host} is outdated",
+      "description": "camera.ui at {host} runs version {version}. Dashboard cards and the sidebar panel's automatic login need {min_version} or newer. Entities keep working. Update camera.ui, then reload the integration."
+    }
   }
 }

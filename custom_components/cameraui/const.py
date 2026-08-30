@@ -6,6 +6,14 @@ DEFAULT_PORT = 3443
 
 CONF_TOKEN = "token"
 CONF_PROXY_SECRET = "proxy_secret"
+CONF_CARD_ACCESS = "card_access"
+CONF_VIEWER_TOKEN = "viewer_token"
+CONF_CLIP_QUALITY = "clip_quality"
+CLIP_QUALITY_LOW = "low"
+CLIP_QUALITY_HIGH = "high"
+MIN_SERVER_VERSION = "2.1.13"
+CARD_ACCESS_ADMINS = "admins"
+CARD_ACCESS_ALL = "all_users"
 
 SIGNAL_DETECTION = f"{DOMAIN}_detection"
 SIGNAL_CONNECTION = f"{DOMAIN}_connection"
