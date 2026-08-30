@@ -19,7 +19,7 @@ try:
 
 except ImportError:
     # cores before 2025.6 only have the service helper, removed in 2026.8
-    from homeassistant.helpers.service import (
+    from homeassistant.helpers.service import (  # type: ignore[attr-defined]
         async_extract_referenced_entity_ids as _legacy_extract_entity_ids,
     )
 
