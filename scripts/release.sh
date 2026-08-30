@@ -1,8 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-# Bump the integration version in manifest.json, rebuild the Lovelace card bundle,
-# commit, tag vX.Y.Z, push and cut a GitHub release. HACS installs from the tag.
+# Bump the integration version in manifest.json, commit, tag vX.Y.Z, push and cut
+# a GitHub release whose body is this version's CHANGELOG.md section. HACS installs
+# from the tag and shows that section as the release notes.
 #
 #   scripts/release.sh patch
 #   scripts/release.sh 0.3.0 --yes
@@ -98,6 +99,12 @@ if git rev-parse "$TAG" >/dev/null 2>&1; then
   exit 1
 fi
 
+NOTES="$(awk -v v="$NEW" '$0 == "## " v {f=1; next} /^## /{f=0} f' CHANGELOG.md)"
+if [ -z "$(echo "$NOTES" | tr -d '[:space:]')" ]; then
+  echo -e "${RED}CHANGELOG.md has no '## $NEW' section - write it first, HACS shows it as the release notes.${NC}"
+  exit 1
+fi
+
 echo -e "${CYAN}Releasing integration: $cur -> $NEW (tag $TAG)${NC}"
 
 if [ "$SKIP_CHECKS" = false ]; then
@@ -105,15 +112,11 @@ if [ "$SKIP_CHECKS" = false ]; then
   npm run lint
 fi
 
-echo -e "${YELLOW}Building card bundle...${NC}"
-npm run build
-
 node -e "const f='./$MANIFEST'; const j=require(f); j.version='$NEW'; require('fs').writeFileSync(f, JSON.stringify(j, null, 2) + '\n')"
-npm --prefix card version "$NEW" --no-git-tag-version >/dev/null
 
-git add "$MANIFEST" card/package.json card/package-lock.json custom_components/cameraui/www
+git add "$MANIFEST"
 git commit -q -m "release: v$NEW"
-echo -e "${GREEN}Committed version bump and rebuilt bundle.${NC}"
+echo -e "${GREEN}Committed version bump.${NC}"
 
 git tag "$TAG"
 echo -e "${GREEN}Created tag $TAG.${NC}"
@@ -134,5 +137,5 @@ fi
 
 git push -q origin main
 git push -q origin "$TAG"
-gh release create "$TAG" --title "$TAG" --generate-notes
+gh release create "$TAG" --title "$TAG" --notes "$NOTES"
 echo -e "${GREEN}Released $TAG. HACS will offer the update once it refreshes.${NC}"
