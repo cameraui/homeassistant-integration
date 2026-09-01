@@ -11,7 +11,7 @@ Requires [HACS](https://hacs.xyz).
 1. In HACS, add this repository as a custom repository (⋮ menu → Custom repositories), category **Integration**. Or use the button above.
 2. Install **camera.ui** and restart Home Assistant.
 3. Add it under Settings → Devices & services → Add integration → camera.ui. camera.ui servers on the local network are discovered automatically; otherwise enter host and port.
-4. Enter an API token. Create one in camera.ui under Settings → Account → API tokens. The token stays on the Home Assistant server, the browser never sees it.
+4. Enter an API token. Create one in camera.ui under Settings → Account → API tokens, signed in as an admin: controlling sensors (locks, lights, PTZ and the rest) needs admin rights, a viewer token can only watch. The token stays on the Home Assistant server, the browser never sees it.
 
 ## What you get
 
