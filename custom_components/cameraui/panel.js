@@ -49,10 +49,12 @@ class CameraUiPanel extends HTMLElement {
       this._postedLang = null;
       this._postedToggle = null;
       this._postedSafeArea = null;
+      this._postedBadge = null;
       this._postTheme();
       this._postLang();
       this._postSidebar();
       this._postSafeArea();
+      this._postBadge();
       this._postRoute();
     });
 
@@ -62,6 +64,7 @@ class CameraUiPanel extends HTMLElement {
   disconnectedCallback() {
     if (this._onMessage) window.removeEventListener('message', this._onMessage);
     if (this._onResize) window.removeEventListener('resize', this._onResize);
+    this._unsubscribeBadges();
   }
 
   set panel(panel) {
@@ -147,6 +150,8 @@ class CameraUiPanel extends HTMLElement {
   }
 
   _sync() {
+    this._subscribeBadges();
+    this._countUpdates();
     if (!this._iframe) return;
     this._applyBg(this._mode());
     if (!this._iframe.getAttribute('src')) this._apply();
@@ -155,7 +160,93 @@ class CameraUiPanel extends HTMLElement {
       this._postLang();
       this._postSidebar();
       this._postSafeArea();
+      this._postBadge();
     }
+  }
+
+  _subscribeBadges() {
+    const conn = this._hass && this._hass.connection;
+    if (!conn || conn === this._badgeConnection) return;
+    this._unsubscribeBadges();
+    this._badgeConnection = conn;
+    this._unsubs = [];
+
+    const notifications = {};
+    this._unsubs.push(
+      conn.subscribeMessage(
+        (message) => {
+          if (message.type === 'removed') {
+            for (const id of Object.keys(message.notifications))
+              delete notifications[id];
+          } else {
+            if (message.type === 'current')
+              for (const id of Object.keys(notifications))
+                delete notifications[id];
+            Object.assign(notifications, message.notifications);
+          }
+          this._notificationCount = Object.keys(notifications).length;
+          this._postBadge();
+        },
+        { type: 'persistent_notification/subscribe' },
+      ),
+    );
+
+    if (this._hass.user && this._hass.user.is_admin) {
+      const refresh = () =>
+        conn
+          .sendMessagePromise({ type: 'repairs/list_issues' })
+          .then((result) => {
+            this._issueCount = result.issues.filter(
+              (issue) => !issue.ignored,
+            ).length;
+            this._postBadge();
+          })
+          .catch(() => {});
+      refresh();
+      this._unsubs.push(
+        conn.subscribeEvents(refresh, 'repairs_issue_registry_updated'),
+      );
+    }
+  }
+
+  _unsubscribeBadges() {
+    for (const pending of this._unsubs || [])
+      pending.then((unsub) => unsub()).catch(() => {});
+    this._unsubs = [];
+    this._badgeConnection = null;
+  }
+
+  _countUpdates() {
+    const states = this._hass && this._hass.states;
+    if (!states || states === this._countedStates) return;
+    this._countedStates = states;
+    const entities = this._hass.entities || {};
+    let count = 0;
+    for (const id of Object.keys(states)) {
+      if (!id.startsWith('update.')) continue;
+      if (entities[id] && entities[id].hidden) continue;
+      const entity = states[id];
+      // UpdateEntityFeature.INSTALL
+      if (
+        entity.state === 'on' &&
+        (entity.attributes.supported_features & 1) !== 0
+      )
+        count++;
+    }
+    if (count === this._updateCount) return;
+    this._updateCount = count;
+    this._postBadge();
+  }
+
+  _postBadge() {
+    if (!this._loaded) return;
+    const count =
+      (this._notificationCount || 0) +
+      (this._updateCount || 0) +
+      (this._issueCount || 0);
+    if (count === this._postedBadge) return;
+    this._postedBadge = count;
+    this._post({ type: 'cui:badge', count });
   }
 
   _postTheme() {
