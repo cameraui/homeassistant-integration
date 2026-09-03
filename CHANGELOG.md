@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- **The panel's own top bar is gone.** The Home Assistant menu button moves into the camera.ui app: top left on phones, and a "Home Assistant" entry at the bottom of the camera.ui sidebar on desktop when the Home Assistant sidebar is hidden. Needs camera.ui 2.1.16.
+- **Status bar and home indicator are handled by camera.ui.** The app's bars now run edge to edge in the Home Assistant app, in camera.ui's colors, without doubled spacing or a band in the wrong theme color.
+
 ## 0.4.0
 
 - **camera.ui cards for dashboards.** A camera card with the snapshot tile or the full live player, a camview view as a widget with drag and drop, and the recent events strip. A click opens the camera.ui dialog with the timeline. The cards are served by the camera.ui server (2.1.13 or newer) and keep working from a local copy while it is down. Access is admins only by default; the integration options open it to all users, with an optional viewer token.
