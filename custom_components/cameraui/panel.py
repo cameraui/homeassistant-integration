@@ -58,6 +58,7 @@ def async_register_panel(hass: HomeAssistant, entry: ConfigEntry, secret: str) -
                 "name": "cameraui-panel",
                 "embed_iframe": False,
                 "trust_external": False,
+                "handle_safe_area": True,
                 "module_url": PANEL_JS_VERSIONED,
             },
             "proxyUrl": f"/api/cameraui/proxy/{secret}/",

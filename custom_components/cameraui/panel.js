@@ -9,6 +9,16 @@ class CameraUiPanel extends HTMLElement {
       parent.style.height = '100%';
     }
 
+    if (!this._onMessage) {
+      this._onMessage = (event) => this._handleMessage(event);
+    }
+
+    window.addEventListener('message', this._onMessage);
+    if (!this._onResize) {
+      this._onResize = () => this._postSafeArea();
+    }
+    window.addEventListener('resize', this._onResize);
+
     if (this._built) return;
     this._built = true;
 
@@ -16,27 +26,42 @@ class CameraUiPanel extends HTMLElement {
     root.innerHTML = `
       <style>
         :host { display: flex; flex-direction: column; height: 100vh; height: 100dvh; background: #0d0d0d; color-scheme: light dark; }
-        .bar { display: none; align-items: center; height: 48px; padding: 0 4px; }
-        :host([narrow]) .bar { display: flex; }
         iframe { flex: 1; border: 0; width: 100%; background: #0d0d0d; color-scheme: light dark; }
+        .probe {
+          position: absolute; visibility: hidden; pointer-events: none;
+          padding: var(--safe-area-inset-top, 0px) var(--safe-area-content-inset-right, var(--safe-area-inset-right, 0px))
+            var(--safe-area-inset-bottom, 0px) var(--safe-area-content-inset-left, var(--safe-area-inset-left, 0px));
+        }
         @media (prefers-color-scheme: light) {
           :host, iframe { background: #f8fafc; }
         }
       </style>
-      <div class="bar"></div>
+      <div class="probe"></div>
       <iframe allow="fullscreen; camera; microphone; autoplay; clipboard-read; clipboard-write"></iframe>
     `;
 
+    this._probe = root.querySelector('.probe');
     this._iframe = root.querySelector('iframe');
     this._iframe.addEventListener('load', () => {
       this._loaded = true;
+      // a reload starts the app from scratch, so the posted state is stale
+      this._postedMode = null;
+      this._postedLang = null;
+      this._postedToggle = null;
+      this._postedSafeArea = null;
       this._postTheme();
       this._postLang();
+      this._postSidebar();
+      this._postSafeArea();
       this._postRoute();
     });
-    this._menu = document.createElement('ha-menu-button');
-    root.querySelector('.bar').appendChild(this._menu);
+
     this._apply();
+  }
+
+  disconnectedCallback() {
+    if (this._onMessage) window.removeEventListener('message', this._onMessage);
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
   }
 
   set panel(panel) {
@@ -46,7 +71,6 @@ class CameraUiPanel extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    if (this._menu) this._menu.hass = hass;
     this._sync();
   }
 
@@ -65,7 +89,7 @@ class CameraUiPanel extends HTMLElement {
     this._narrow = narrow;
     if (narrow) this.setAttribute('narrow', '');
     else this.removeAttribute('narrow');
-    if (this._menu) this._menu.narrow = narrow;
+    this._postSidebar();
   }
 
   _mode() {
@@ -78,10 +102,23 @@ class CameraUiPanel extends HTMLElement {
     return this._hass && this._hass.language ? this._hass.language : null;
   }
 
+  _canToggleMenu() {
+    if (this._hass && this._hass.kioskMode) return false;
+    const alwaysHidden = !!(
+      this._hass && this._hass.dockedSidebar === 'always_hidden'
+    );
+    return !!this._narrow || alwaysHidden;
+  }
+
   _applyBg(mode) {
     const bg = mode === 'dark' ? '#0d0d0d' : '#f8fafc';
     this.style.background = bg;
     if (this._iframe) this._iframe.style.background = bg;
+  }
+
+  _safeArea() {
+    const s = getComputedStyle(this._probe);
+    return `${s.paddingTop},${s.paddingRight},${s.paddingBottom},${s.paddingLeft}`;
   }
 
   _appPath() {
@@ -101,12 +138,11 @@ class CameraUiPanel extends HTMLElement {
       if (mode) url.searchParams.set('cui_theme', mode);
       const lang = this._lang();
       if (lang) url.searchParams.set('cui_lang', lang);
+      // so the app can render the burger on first paint instead of waiting for cui:sidebar
+      url.searchParams.set('cui_menu', this._canToggleMenu() ? '1' : '0');
+      url.searchParams.set('cui_safe', this._safeArea());
       this._postedPath = this._routePath || '';
       this._iframe.setAttribute('src', `${url.pathname}${url.search}`);
-    }
-    if (this._menu) {
-      this._menu.hass = this._hass;
-      this._menu.narrow = this._narrow;
     }
   }
 
@@ -117,6 +153,8 @@ class CameraUiPanel extends HTMLElement {
     if (this._loaded) {
       this._postTheme();
       this._postLang();
+      this._postSidebar();
+      this._postSafeArea();
     }
   }
 
@@ -141,10 +179,44 @@ class CameraUiPanel extends HTMLElement {
     this._post({ type: 'cui:navigate', path: path || '/' });
   }
 
+  _postSidebar() {
+    if (!this._loaded) return;
+    const canToggle = this._canToggleMenu();
+    if (canToggle === this._postedToggle) return;
+    this._postedToggle = canToggle;
+    this._post({ type: 'cui:sidebar', canToggle });
+  }
+
+  _postSafeArea() {
+    if (!this._loaded) return;
+    const insets = this._safeArea();
+    if (insets === this._postedSafeArea) return;
+    this._postedSafeArea = insets;
+    this._post({ type: 'cui:safe-area', insets });
+  }
+
   _post(message) {
     if (this._iframe && this._iframe.contentWindow) {
       this._iframe.contentWindow.postMessage(message, window.location.origin);
     }
+  }
+
+  _handleMessage(event) {
+    if (!this._iframe || event.source !== this._iframe.contentWindow) return;
+    if (event.origin !== window.location.origin) return;
+    const data = event.data;
+    if (!data || data.type !== 'cui:menu') return;
+    this._toggleMenu(typeof data.open === 'boolean' ? data.open : undefined);
+  }
+
+  _toggleMenu(open) {
+    this.dispatchEvent(
+      new CustomEvent('hass-toggle-menu', {
+        detail: typeof open === 'boolean' ? { open } : undefined,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 }
 
