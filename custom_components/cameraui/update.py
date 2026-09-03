@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.components.update import UpdateEntity, UpdateEntityFeature
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -15,11 +16,16 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import CameraUiApiError, CameraUiClient
-from .const import DOMAIN
+from .const import CONF_ALLOW_UPDATES, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 UPDATE_SCAN_INTERVAL = timedelta(hours=6)
+
+# the entity sits on the "camera.ui" device, the dialog has to say what actually gets replaced
+SERVER_UPDATE_NOTE = (
+    "**This updates the camera.ui server itself, not just the Home Assistant integration.**\n\n"
+)
 
 
 class CameraUiUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -66,6 +72,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: Any, async_add_entities:
     await coordinator.async_config_entry_first_refresh()
 
     device = _server_device(entry)
+    allow_install = entry.options.get(CONF_ALLOW_UPDATES, True)
 
     # the registry does not reliably pick up a changed name from device_info
     # on existing devices — rename explicitly (name_by_user still wins)
@@ -75,13 +82,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: Any, async_add_entities:
     ) and existing.name != device["name"]:
         registry.async_update_device(existing.id, name=device["name"])
 
-    entities: list[UpdateEntity] = [CameraUiServerUpdateEntity(coordinator, entry, device)]
+    entities: list[UpdateEntity] = [CameraUiServerUpdateEntity(coordinator, entry, device, allow_install)]
     known_plugins: set[str] = set()
 
     @callback
     def _sync_plugin_entities() -> None:
         fresh = [
-            CameraUiPluginUpdateEntity(coordinator, entry, device, name)
+            CameraUiPluginUpdateEntity(coordinator, entry, device, name, allow_install)
             for name in coordinator.data["plugins"]
             if name not in known_plugins
         ]
@@ -90,7 +97,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: Any, async_add_entities:
             async_add_entities(fresh)
 
     known_plugins.update(coordinator.data["plugins"])
-    entities.extend(CameraUiPluginUpdateEntity(coordinator, entry, device, name) for name in known_plugins)
+    entities.extend(
+        CameraUiPluginUpdateEntity(coordinator, entry, device, name, allow_install) for name in known_plugins
+    )
     async_add_entities(entities)
 
     entry.async_on_unload(coordinator.async_add_listener(_sync_plugin_entities))
@@ -110,15 +119,20 @@ def _server_device(entry: Any) -> DeviceInfo:
 
 class CameraUiServerUpdateEntity(CoordinatorEntity[CameraUiUpdateCoordinator], UpdateEntity):
     _attr_has_entity_name = True
-    _attr_supported_features = UpdateEntityFeature.INSTALL | UpdateEntityFeature.RELEASE_NOTES
-    _attr_title = "camera.ui"
+    _attr_title = "camera.ui server"
     # main entity of the device: display name is just the device name
     _attr_name = None
 
-    def __init__(self, coordinator: CameraUiUpdateCoordinator, entry: Any, device: DeviceInfo) -> None:
+    def __init__(
+        self, coordinator: CameraUiUpdateCoordinator, entry: Any, device: DeviceInfo, allow_install: bool
+    ) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_server_update"
         self._attr_device_info = device
+        features = UpdateEntityFeature.RELEASE_NOTES
+        if allow_install:
+            features |= UpdateEntityFeature.INSTALL | UpdateEntityFeature.BACKUP
+        self._attr_supported_features = features
 
     @property
     def installed_version(self) -> str | None:
@@ -132,7 +146,8 @@ class CameraUiServerUpdateEntity(CoordinatorEntity[CameraUiUpdateCoordinator], U
         version = self.latest_version
         if not version:
             return None
-        return await self.coordinator.client.get_server_changelog(version)
+        changelog = await self.coordinator.client.get_server_changelog(version)
+        return SERVER_UPDATE_NOTE + (changelog or "")
 
     async def async_install(self, version: str | None, backup: bool, **kwargs: Any) -> None:
         target = version or self.latest_version
@@ -141,6 +156,14 @@ class CameraUiServerUpdateEntity(CoordinatorEntity[CameraUiUpdateCoordinator], U
         self._attr_in_progress = True
         self.async_write_ha_state()
         try:
+            if backup:
+                try:
+                    filename = await self.coordinator.client.create_backup()
+                except CameraUiApiError as err:
+                    raise HomeAssistantError(
+                        f"Backup before the update failed, update not started: {err}"
+                    ) from err
+                _LOGGER.info("Backup %s written before updating camera.ui to %s", filename, target)
             await self.coordinator.client.update_server(target)
             # the update only stages the new version, the restart applies it
             await self.coordinator.client.restart_server()
@@ -152,7 +175,6 @@ class CameraUiServerUpdateEntity(CoordinatorEntity[CameraUiUpdateCoordinator], U
 
 class CameraUiPluginUpdateEntity(CoordinatorEntity[CameraUiUpdateCoordinator], UpdateEntity):
     _attr_has_entity_name = True
-    _attr_supported_features = UpdateEntityFeature.INSTALL | UpdateEntityFeature.RELEASE_NOTES
 
     def __init__(
         self,
@@ -160,11 +182,16 @@ class CameraUiPluginUpdateEntity(CoordinatorEntity[CameraUiUpdateCoordinator], U
         entry: Any,
         device: DeviceInfo,
         plugin_name: str,
+        allow_install: bool,
     ) -> None:
         super().__init__(coordinator)
         self._plugin_name = plugin_name
         self._attr_unique_id = f"{entry.entry_id}_plugin_update_{plugin_name}"
         self._attr_device_info = device
+        features = UpdateEntityFeature.RELEASE_NOTES
+        if allow_install:
+            features |= UpdateEntityFeature.INSTALL
+        self._attr_supported_features = features
         display = self._plugin.get("display_name", plugin_name)
         self._attr_title = display
         self._attr_name = display

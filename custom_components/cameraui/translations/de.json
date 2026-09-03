@@ -116,7 +116,11 @@
         "data": {
           "card_access": "Kartenzugriff",
           "viewer_token": "Viewer-Token (optional)",
-          "clip_quality": "Clip-Qualität (Medienbrowser)"
+          "clip_quality": "Clip-Qualität (Medienbrowser)",
+          "allow_updates": "Updates aus Home Assistant erlauben"
+        },
+        "data_description": {
+          "allow_updates": "Installiert Server- und Plugin-Updates von camera.ui über die Update-Entities. Aus lässt sie sichtbar, aber ohne Installieren-Knopf."
         }
       }
     },

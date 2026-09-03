@@ -2,6 +2,8 @@
 
 ## 0.4.1
 
+- **Backup before a server update.** The install dialog of the server update entity offers "Create backup before updating"; the backup lands in the camera.ui scheduled-backup folder and a failed backup stops the update. The release notes now say that the update replaces the camera.ui server itself, not just the integration.
+- **Updates from Home Assistant can be turned off.** A new option in the integration settings keeps the update entities visible without an install button.
 - **The panel's own top bar is gone.** The Home Assistant menu button moves into the camera.ui app: top left on phones, and a "Home Assistant" entry at the bottom of the camera.ui sidebar on desktop when the Home Assistant sidebar is hidden. Needs camera.ui 2.1.16.
 - **Status bar and home indicator are handled by camera.ui.** The app's bars now run edge to edge in the Home Assistant app, in camera.ui's colors, without doubled spacing or a band in the wrong theme color.
 

@@ -11,6 +11,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -26,6 +27,7 @@ from .const import (
     CARD_ACCESS_ALL,
     CLIP_QUALITY_HIGH,
     CLIP_QUALITY_LOW,
+    CONF_ALLOW_UPDATES,
     CONF_CARD_ACCESS,
     CONF_CLIP_QUALITY,
     CONF_TOKEN,
@@ -212,6 +214,7 @@ class CameraUiOptionsFlow(OptionsFlow):
                 data = {
                     CONF_CARD_ACCESS: user_input[CONF_CARD_ACCESS],
                     CONF_CLIP_QUALITY: user_input[CONF_CLIP_QUALITY],
+                    CONF_ALLOW_UPDATES: user_input[CONF_ALLOW_UPDATES],
                 }
                 if viewer:
                     data[CONF_VIEWER_TOKEN] = viewer
@@ -239,6 +242,9 @@ class CameraUiOptionsFlow(OptionsFlow):
                         translation_key=CONF_CLIP_QUALITY,
                     )
                 ),
+                vol.Required(
+                    CONF_ALLOW_UPDATES, default=entry.options.get(CONF_ALLOW_UPDATES, True)
+                ): BooleanSelector(),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

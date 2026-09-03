@@ -19,7 +19,7 @@ Requires [HACS](https://hacs.xyz).
 
 Each camera is a device with a camera entity (snapshot and RTSP stream) and, depending on the camera, entities for motion, object detection (person, vehicle, animal), faces, license plates and classifications. Standalone sensors from camera.ui (switches, lights, sirens, locks, covers, alarm panels) show up as their own entities and can be controlled from Home Assistant.
 
-An update entity per server shows available camera.ui updates and installs them.
+An update entity per server shows available camera.ui updates and installs them, with an optional backup first. The integration options can turn installing from Home Assistant off.
 
 ### Sidebar panel
 

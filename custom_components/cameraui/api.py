@@ -121,6 +121,16 @@ class CameraUiClient:
     async def restart_server(self) -> None:
         await self._request("PUT", "/server/restart")
 
+    # writes into the scheduled-backup folder, the server answers 500 on a failed run and 409 while one runs
+    async def create_backup(self) -> str | None:
+        response = await self._request(
+            "POST",
+            "/backup/scheduler/run",
+            timeout=aiohttp.ClientTimeout(total=1800),
+        )
+        result = await response.json()
+        return result.get("filename")
+
     async def get_plugins(self) -> list[dict[str, Any]]:
         response = await self._request("GET", "/plugins", params={"pageSize": "-1"})
         data = await response.json()
