@@ -12,7 +12,7 @@
     "lint:python": "cd custom_components && ruff check --fix && uv run --quiet --python 3.14 --with-requirements ../requirements-dev.txt mypy --config-file ./mypy.ini cameraui && cd ..",
     "lint": "npm run lint:python",
     "release": "bash scripts/release.sh",
-    "update": "updates --update ./"
+    "update": "updates -M npm,pypi,go,cargo,docker,make --update ./"
   },
   "homepage": "https://github.com/cameraui/homeassistant-integration#readme",
   "bugs": {
@@ -25,6 +25,6 @@
   "license": "MIT",
   "author": "seydx",
   "devDependencies": {
-    "updates": "^18.0.7"
+    "updates": "^18.1.0"
   }
 }
