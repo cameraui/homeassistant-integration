@@ -19,7 +19,7 @@
     "camera-ui-rpc==1.0.10",
     "python-socketio==5.16.3"
   ],
-  "version": "0.4.1",
+  "version": "0.4.2",
   "zeroconf": [
     "_camera-ui._tcp.local."
   ]
