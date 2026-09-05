@@ -32,6 +32,7 @@ class CameraUiClient:
         self._detection_callbacks: list[Callable[[dict[str, Any]], None]] = []
         self._connection_callbacks: list[Callable[[bool], None]] = []
         self._sensor_callbacks: list[Callable[[dict[str, Any]], None]] = []
+        self._update_callbacks: list[Callable[[], None]] = []
 
     @property
     def base_url(self) -> str:
@@ -76,6 +77,17 @@ class CameraUiClient:
         if response.status >= 400:
             raise CameraUiApiError(f"Server info returned {response.status}")
         return await response.json()
+
+    async def get_me(self) -> dict[str, Any]:
+        response = await self._request("GET", "/auth/me")
+        return await response.json()
+
+    async def is_admin(self) -> bool:
+        try:
+            me = await self.get_me()
+        except CameraUiApiError:
+            return False
+        return me.get("role") in ("admin", "master")
 
     async def validate(self) -> dict[str, Any]:
         info = await self.get_info()
@@ -194,9 +206,17 @@ class CameraUiClient:
     def on_sensor(self, callback: Callable[[dict[str, Any]], None]) -> None:
         self._sensor_callbacks.append(callback)
 
+    def add_update_callback(self, callback: Callable[[], None]) -> None:
+        self._update_callbacks.append(callback)
+
     async def connect_events(self) -> None:
         if self._sio:
             return
+
+        # /server is admin-only and a rejected namespace fails the whole connect, so only admins join it
+        namespaces = ["/events"]
+        if await self.is_admin():
+            namespaces.append("/server")
 
         sio = socketio.AsyncClient(http_session=self._session, reconnection=True, reconnection_delay=5)
         self._sio = sio
@@ -222,11 +242,18 @@ class CameraUiClient:
             for callback in self._sensor_callbacks:
                 callback(message)
 
+        # the server re-checks npm right after an install and after its own 10 minute interval
+        @sio.on("plugin-updates", namespace="/server")
+        @sio.on("server-updates", namespace="/server")
+        async def updates_changed(_message: Any) -> None:
+            for callback in self._update_callbacks:
+                callback()
+
         try:
             await sio.connect(
                 self.base_url,
                 socketio_path="/api/socket.io",
-                namespaces=["/events"],
+                namespaces=namespaces,
                 auth={"token": f"Bearer {self._token}"},
                 transports=["websocket"],
             )

@@ -20,7 +20,7 @@ from .const import CONF_ALLOW_UPDATES, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-UPDATE_SCAN_INTERVAL = timedelta(hours=6)
+UPDATE_SCAN_INTERVAL = timedelta(hours=1)
 
 # the entity sits on the "camera.ui" device, the dialog has to say what actually gets replaced
 SERVER_UPDATE_NOTE = (
@@ -70,6 +70,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: Any, async_add_entities:
     client = entry.runtime_data.coordinator.client
     coordinator = CameraUiUpdateCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()
+
+    @callback
+    def _server_changed() -> None:
+        hass.async_create_task(coordinator.async_request_refresh())
+
+    client.add_update_callback(_server_changed)
 
     device = _server_device(entry)
     allow_install = entry.options.get(CONF_ALLOW_UPDATES, True)

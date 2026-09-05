@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+
+- **Update entities follow the server right away.** A plugin or server updated from the camera.ui interface no longer stays listed as pending in Home Assistant for hours, and the install button no longer reinstalls the version that is already running. The server pushes the change over the event socket, the poll behind it runs hourly instead of every six hours.
+
 ## 0.4.1
 
 - **Backup before a server update.** The install dialog of the server update entity offers "Create backup before updating"; the backup lands in the camera.ui scheduled-backup folder and a failed backup stops the update. The release notes now say that the update replaces the camera.ui server itself, not just the integration.
