@@ -25,6 +25,6 @@
   "license": "MIT",
   "author": "seydx",
   "devDependencies": {
-    "updates": "^18.1.1"
+    "updates": "^19.0.0"
   }
 }
