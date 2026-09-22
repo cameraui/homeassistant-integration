@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3
+
+- Dependency updates.
+
 ## 0.4.2
 
 - **Update entities follow the server right away.** A plugin or server updated from the camera.ui interface no longer stays listed as pending in Home Assistant for hours, and the install button no longer reinstalls the version that is already running. The server pushes the change over the event socket, the poll behind it runs hourly instead of every six hours.
