@@ -59,6 +59,7 @@ class CameraUiRpc:
     ) -> list[dict[str, Any]]:
         nvr = await self._nvr()
         events: list[dict[str, Any]] = []
+        seen: set[str] = set()
         before: int | None = None
         while len(events) < limit:
             options: dict[str, Any] = {
@@ -79,10 +80,17 @@ class CameraUiRpc:
             except Exception as err:  # noqa: BLE001
                 raise CameraUiRpcError(f"Event query failed: {err}") from err
             page = result.get("events") or []
-            events.extend(page)
-            if not result.get("hasMore") or not page:
+            fresh = [event for event in page if event.get("id") not in seen]
+            seen.update(event.get("id") for event in fresh)
+            events.extend(fresh)
+            # events reaching in from before the window come with every page and
+            # sort last, so page on the oldest start inside the window
+            cursor = min(
+                (event["startTime"] for event in page if event.get("startTime", 0) >= start_ms), default=None
+            )
+            if not result.get("hasMore") or cursor is None or not fresh:
                 break
-            before = page[-1]["startTime"]
+            before = cursor
         return events
 
     async def get_event_thumbnail(self, camera_id: str, start_ms: int, event_id: str) -> bytes | None:

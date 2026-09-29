@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.4
+
+- **The media browser lists every recording of a day.** A day that started during a running event stopped after the first page and listed that event twice. Needs NVR 1.5.1.
+
 ## 0.4.3
 
 - Dependency updates.
