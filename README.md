@@ -50,6 +50,7 @@ Snapshot mode is the tile from the camera.ui home view: current snapshot with it
 type: custom:cameraui-view-card
 view: Living room        # a camview view from camera.ui, the editor lists them
 rearrange: true          # show the rearrange button inside the widget
+activity_mode: per-camera # per-camera (default), always-on, activity or standby
 ```
 
 A saved camera.ui camview view as a widget: the same camera grid with drag and drop and card sizes. Rearranging inside the widget is shared with the sidebar panel. With several camera.ui servers the editor also offers a server picker.
