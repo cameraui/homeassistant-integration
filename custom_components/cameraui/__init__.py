@@ -95,18 +95,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: CameraUiConfigEntry) -> 
     except CameraUiApiError as err:
         raise ConfigEntryNotReady(f"Event socket unavailable: {err}") from err
 
-    sensor_manager = CameraUiSensorManager(hass, coordinator)
-    await sensor_manager.async_setup()
+    # HA skips async_unload_entry after a failed setup, the socket would keep firing events
+    try:
+        sensor_manager = CameraUiSensorManager(hass, coordinator)
+        await sensor_manager.async_setup()
 
-    rpc = CameraUiRpc(entry.data[CONF_HOST], entry.data[CONF_PORT], entry.data[CONF_TOKEN])
-    clips = ClipCache(
-        hass, entry.entry_id, rpc, client.base_url, entry.options.get(CONF_CLIP_QUALITY, CLIP_QUALITY_LOW)
-    )
-    await clips.wipe()
+        rpc = CameraUiRpc(entry.data[CONF_HOST], entry.data[CONF_PORT], entry.data[CONF_TOKEN])
+        clips = ClipCache(
+            hass, entry.entry_id, rpc, client.base_url, entry.options.get(CONF_CLIP_QUALITY, CLIP_QUALITY_LOW)
+        )
+        await clips.wipe()
 
-    entry.runtime_data = CameraUiRuntimeData(coordinator, sensor_manager, rpc, clips)
-    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        entry.runtime_data = CameraUiRuntimeData(coordinator, sensor_manager, rpc, clips)
+        entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    except BaseException:
+        await client.disconnect_events()
+        raise
 
     secret = entry.data.get(CONF_PROXY_SECRET)
     if not secret:

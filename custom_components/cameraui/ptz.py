@@ -7,26 +7,9 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.target import TargetSelection, async_extract_referenced_entity_ids
 
 from .const import DOMAIN
-
-try:
-    from homeassistant.helpers.target import TargetSelection, async_extract_referenced_entity_ids
-
-    def _referenced_entity_ids(hass: HomeAssistant, call: ServiceCall) -> set[str]:
-        selected = async_extract_referenced_entity_ids(hass, TargetSelection(call.data))
-        return selected.referenced | selected.indirectly_referenced
-
-except ImportError:
-    # cores before 2025.6 only have the service helper, removed in 2026.8
-    from homeassistant.helpers.service import (  # type: ignore[attr-defined]
-        async_extract_referenced_entity_ids as _legacy_extract_entity_ids,
-    )
-
-    def _referenced_entity_ids(hass: HomeAssistant, call: ServiceCall) -> set[str]:
-        selected = _legacy_extract_entity_ids(hass, call)
-        return selected.referenced | selected.indirectly_referenced
-
 
 SERVICE_PTZ = "ptz"
 
@@ -48,6 +31,11 @@ PTZ_SCHEMA = vol.Schema(
         vol.Optional(ATTR_PRESET): cv.string,
     }
 )
+
+
+def _referenced_entity_ids(hass: HomeAssistant, call: ServiceCall) -> set[str]:
+    selected = async_extract_referenced_entity_ids(hass, TargetSelection(call.data))
+    return selected.referenced | selected.indirectly_referenced
 
 
 def _resolve_command(data: dict[str, Any]) -> tuple[str, Any]:

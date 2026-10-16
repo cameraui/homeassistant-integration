@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import gzip
 import hmac
 import logging
 import re
+import threading
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -18,7 +21,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from yarl import URL
 
 from .api import bundle_tag
-from .clips import async_find_event
+from .clips import ClipDownload, async_find_event
 from .const import (
     CARD_ACCESS_ADMINS,
     CARD_ACCESS_ALL,
@@ -38,12 +41,19 @@ _LOGGER = logging.getLogger(__name__)
 
 CARDS_ASSET_NAME = re.compile(r"^[\w.-]+\.js$")
 CARDS_BUNDLE = "cameraui-cards.js"
-CARDS_TAGGED_BUNDLE = re.compile(r"^cameraui-cards\.\w+\.js$")
+CARDS_TAGGED_BUNDLE = re.compile(r"^cameraui-cards\.(\w+)\.js$")
+CARDS_IMPORT = re.compile(rb"""["'`]\./([\w.-]+\.js)["'`]""")
 CARDS_FONT_NAME = re.compile(r"^[\w.-]+\.woff2$")
 FONT_CONTENT_TYPE = "font/woff2"
 CONDITIONAL_HEADERS = (hdrs.IF_NONE_MATCH, hdrs.IF_MODIFIED_SINCE)
+GZIP_ACCEPTED = re.compile(r"\bgzip\b", re.IGNORECASE)
 PASSTHROUGH_HEADERS = (hdrs.CONTENT_TYPE, hdrs.ETAG, hdrs.LAST_MODIFIED)
 MAX_WS_MESSAGE_SIZE = 16 * 1024 * 1024
+PROXY_TIMEOUT = aiohttp.ClientTimeout(total=None, connect=30, sock_connect=10)
+ASSET_TIMEOUT = aiohttp.ClientTimeout(total=None, connect=5, sock_connect=3, sock_read=10)
+WS_UPSTREAM_LOST = 4500
+WS_FORBIDDEN = 4403
+WS_UNAUTHORIZED = 4401
 
 HOP_BY_HOP = {
     hdrs.CONTENT_LENGTH,
@@ -57,7 +67,10 @@ HOP_BY_HOP = {
     hdrs.SEC_WEBSOCKET_VERSION,
     hdrs.SEC_WEBSOCKET_KEY,
 }
+# proxied bodies stay encoded, so their Content-Encoding goes along
+RESPONSE_HOP_BY_HOP = HOP_BY_HOP - {hdrs.CONTENT_ENCODING}
 PROXY_PREFIX = "/api/cameraui/proxy"
+VIDEO_RELAY_PATH = "api/go2rtc"
 
 
 class CameraUiProxyView(HomeAssistantView):
@@ -143,35 +156,53 @@ class CameraUiCardsAssetView(HomeAssistantView):
                 headers={hdrs.CACHE_CONTROL: "no-store"},
             )
 
-        upstream_file = CARDS_BUNDLE if CARDS_TAGGED_BUNDLE.match(file) else file
+        tagged = CARDS_TAGGED_BUNDLE.match(file)
+        upstream_file = CARDS_BUNDLE if tagged else file
         headers = {name: request.headers[name] for name in CONDITIONAL_HEADERS if name in request.headers}
+        # the mirror keeps plain files and Python only unpacks gzip, so gzip is the one encoding passed on
+        gzip_ok = GZIP_ACCEPTED.search(request.headers.get(hdrs.ACCEPT_ENCODING, ""))
+        headers[hdrs.ACCEPT_ENCODING] = "gzip" if gzip_ok else "identity"
         session = async_get_clientsession(hass, verify_ssl=False)
         try:
             async with session.get(
-                _cards_url(entry, upstream_file), headers=headers, allow_redirects=False
+                _cards_url(entry, upstream_file),
+                headers=headers,
+                allow_redirects=False,
+                auto_decompress=False,
+                timeout=ASSET_TIMEOUT,
             ) as upstream:
                 if upstream.status == 304:
-                    return _asset_response(304, upstream.headers)
+                    return _cards_response(304, upstream.headers)
                 if upstream.status != 200:
                     raise web.HTTPNotFound
+                encoding = upstream.headers.get(hdrs.CONTENT_ENCODING, "identity")
+                if encoding not in ("gzip", "identity"):
+                    raise web.HTTPBadGateway
                 body = await upstream.read()
-                await mirror.store(file, body)
-                return _asset_response(200, upstream.headers, body)
-        except aiohttp.ClientError as err:
+                plain = (
+                    await hass.async_add_executor_job(gzip.decompress, body) if encoding == "gzip" else body
+                )
+                await mirror.store(file, plain)
+                if tagged:
+                    await mirror.bundle_stored(tagged[1])
+                return _cards_response(200, upstream.headers, body)
+        except (aiohttp.ClientError, TimeoutError) as err:
             cached = await mirror.load(file)
             if cached is None:
                 _LOGGER.debug("Cards asset %s failed and is not mirrored: %s", file, err)
                 raise web.HTTPBadGateway from err
-            return _asset_response(200, None, cached)
+            return _cards_response(200, None, cached)
 
     async def _upstream_tag(self, hass: HomeAssistant, entry: ConfigEntry) -> str | None:
         session = async_get_clientsession(hass, verify_ssl=False)
         try:
-            async with session.head(_cards_url(entry, CARDS_BUNDLE), allow_redirects=False) as head:
+            async with session.head(
+                _cards_url(entry, CARDS_BUNDLE), allow_redirects=False, timeout=ASSET_TIMEOUT
+            ) as head:
                 if head.status != 200:
                     return None
                 return bundle_tag(head.headers)
-        except aiohttp.ClientError:
+        except aiohttp.ClientError, TimeoutError:
             return None
 
 
@@ -192,13 +223,13 @@ class CameraUiCardsFontView(HomeAssistantView):
         )
         session = async_get_clientsession(hass, verify_ssl=False)
         try:
-            async with session.get(upstream_url, allow_redirects=False) as upstream:
+            async with session.get(upstream_url, allow_redirects=False, timeout=ASSET_TIMEOUT) as upstream:
                 if upstream.status != 200:
                     raise web.HTTPNotFound
                 body = await upstream.read()
                 await mirror.store(key, body)
                 return _asset_response(200, upstream.headers, body, FONT_CONTENT_TYPE)
-        except aiohttp.ClientError as err:
+        except (aiohttp.ClientError, TimeoutError) as err:
             cached = await mirror.load(key)
             if cached is None:
                 raise web.HTTPBadGateway from err
@@ -243,11 +274,11 @@ class CameraUiMediaView(HomeAssistantView):
         hass = request.app[KEY_HASS]
         entry = _get_loaded_entry(hass, entry_id)
         parts = path.split("/")
-        if not entry or len(parts) != 3:
+        if not entry or len(parts) not in (3, 4):
             raise web.HTTPNotFound
         runtime = entry.runtime_data
         try:
-            if kind == "thumb":
+            if kind == "thumb" and len(parts) == 3:
                 image = await runtime.rpc.get_event_thumbnail(parts[0], int(parts[1]), parts[2])
                 if not image:
                     raise web.HTTPNotFound
@@ -257,10 +288,7 @@ class CameraUiMediaView(HomeAssistantView):
                     headers={hdrs.CACHE_CONTROL: "private, max-age=3600"},
                 )
             if kind == "clip":
-                event = await async_find_event(entry, parts[0], parts[1], parts[2])
-                if not event:
-                    raise web.HTTPNotFound
-                return await _clip_response(request, runtime, parts[0], parts[2], event)
+                return await _clip_response(request, await _open_clip(entry, *parts), parts[2])
         except ValueError as err:
             raise web.HTTPNotFound from err
         except CameraUiRpcError as err:
@@ -269,24 +297,36 @@ class CameraUiMediaView(HomeAssistantView):
         raise web.HTTPNotFound
 
 
+async def _open_clip(
+    entry: ConfigEntry, camera_id: str, day: str, event_id: str, start: str | None = None
+) -> Path | ClipDownload:
+    clips = entry.runtime_data.clips
+    ready = await clips.cached(event_id)
+    if ready is not None:
+        return ready
+    event = await async_find_event(entry, camera_id, day, event_id, int(start) if start else None)
+    if not event:
+        raise web.HTTPNotFound
+    return await clips.open(camera_id, event_id, event["startTime"], event["endTime"])
+
+
 async def _clip_response(
-    request: web.Request, runtime: Any, camera_id: str, event_id: str, event: dict[str, Any]
+    request: web.Request, ready: Path | ClipDownload, event_id: str
 ) -> web.StreamResponse:
     headers = {hdrs.CONTENT_TYPE: "video/mp4"}
     byte_range = request.headers.get(hdrs.RANGE, "").replace(" ", "")
-    if byte_range and byte_range != "bytes=0-":
-        clip = await runtime.clips.get(camera_id, event_id, event["startTime"], event["endTime"])
-        return web.FileResponse(clip, headers=headers)
-    ready = await runtime.clips.open(camera_id, event_id, event["startTime"], event["endTime"])
+    if isinstance(ready, ClipDownload) and byte_range and byte_range != "bytes=0-":
+        ready = await ready.file()
     if isinstance(ready, Path):
         return web.FileResponse(ready, headers=headers)
     started = time.monotonic()
     response = web.StreamResponse(status=200, headers=headers)
     await response.prepare(request)
     sent = 0
-    async for chunk in ready.stream():
-        sent += len(chunk)
-        await response.write(chunk)
+    async with contextlib.aclosing(ready.stream()) as chunks:
+        async for chunk in chunks:
+            sent += len(chunk)
+            await response.write(chunk)
     await response.write_eof()
     _LOGGER.debug("clip %s streamed %d bytes in %.1fs", event_id[:8], sent, time.monotonic() - started)
     return response
@@ -297,13 +337,21 @@ def _asset_response(
 ) -> web.Response:
     headers = {
         hdrs.CACHE_CONTROL: "public, max-age=31536000, immutable",
-        hdrs.CONTENT_TYPE: "text/javascript",
+        hdrs.CONTENT_TYPE: content_type,
     }
     if upstream_headers is not None:
         for name in PASSTHROUGH_HEADERS:
             if name in upstream_headers:
                 headers[name] = upstream_headers[name]
     return web.Response(status=status, headers=headers, body=body)
+
+
+def _cards_response(status: int, upstream_headers: Any, body: bytes | None = None) -> web.Response:
+    response = _asset_response(status, upstream_headers, body)
+    response.headers[hdrs.VARY] = hdrs.ACCEPT_ENCODING
+    if upstream_headers is not None and upstream_headers.get(hdrs.CONTENT_ENCODING) == "gzip":
+        response.headers[hdrs.CONTENT_ENCODING] = "gzip"
+    return response
 
 
 class _CardsMirror:
@@ -317,6 +365,9 @@ class _CardsMirror:
     async def last_tag(self) -> str | None:
         return await self._hass.async_add_executor_job(self._read_tag)
 
+    async def bundle_stored(self, tag: str) -> None:
+        await self._hass.async_add_executor_job(self._switch_tag, tag)
+
     async def store(self, file: str, body: bytes) -> None:
         await self._hass.async_add_executor_job(self._write_file, file, body)
 
@@ -324,26 +375,63 @@ class _CardsMirror:
         return await self._hass.async_add_executor_job(self._read_file, file)
 
     def _write_tag(self, tag: str) -> None:
-        self._dir.mkdir(parents=True, exist_ok=True)
-        marker = self._dir / "latest"
-        if marker.is_file() and marker.read_text().strip() == tag:
+        latest = self._read_tag()
+        if latest == tag:
+            (self._dir / "pending").unlink(missing_ok=True)
+        elif latest is None:
+            self._write_file("latest", tag.encode())
+        else:
+            # a new build takes over once its bundle is mirrored, until then the old one stays complete
+            self._write_file("pending", tag.encode())
+
+    def _switch_tag(self, tag: str) -> None:
+        pending = self._dir / "pending"
+        if self._read_marker(pending) != tag:
             return
-        # a new build: chunk names change with content, the old mirror only wastes space
+        previous = self._read_tag()
+        if previous == tag:
+            # another request switched already, a second pass would drop the previous build's chunks
+            pending.unlink(missing_ok=True)
+            return
+        # chunks a build shares with the one before keep their names and sit in browser caches, a
+        # browser never fetches them again. Keep everything both bundles import, drop older builds
+        keep = self._imported([f"cameraui-cards.{name}.js" for name in (tag, previous) if name])
+        self._write_file("latest", tag.encode())
+        pending.unlink(missing_ok=True)
         for old in self._dir.glob("*.js"):
-            old.unlink(missing_ok=True)
-        marker.write_text(tag)
+            if old.name not in keep:
+                old.unlink(missing_ok=True)
+
+    def _imported(self, roots: list[str]) -> set[str]:
+        seen: set[str] = set()
+        queue = list(roots)
+        while queue:
+            name = queue.pop()
+            if name in seen:
+                continue
+            seen.add(name)
+            path = self._dir / name
+            if path.is_file():
+                queue.extend(match.decode() for match in CARDS_IMPORT.findall(path.read_bytes()))
+        return seen
 
     def _read_tag(self) -> str | None:
-        marker = self._dir / "latest"
-        if not marker.is_file():
+        return self._read_marker(self._dir / "latest")
+
+    @staticmethod
+    def _read_marker(marker: Path) -> str | None:
+        # markers change from parallel executor jobs, a missing one reads as unset
+        try:
+            tag = marker.read_text().strip()
+        except OSError:
             return None
-        tag = marker.read_text().strip()
         return tag if tag.isalnum() else None
 
     def _write_file(self, file: str, body: bytes) -> None:
         target = self._dir / file
         target.parent.mkdir(parents=True, exist_ok=True)
-        tmp = target.with_name(f"{target.name}.tmp")
+        # parallel requests can store the same file, a shared tmp would vanish under one of them
+        tmp = target.with_name(f"{target.name}.{threading.get_ident()}.tmp")
         tmp.write_bytes(body)
         tmp.replace(target)
 
@@ -358,7 +446,6 @@ def _cards_url(entry: ConfigEntry, file: str) -> URL:
     )
 
 
-# HA admins run at the integration token's rights; everyone else gets the viewer token when one is stored
 def _card_token(request: web.Request, entry: ConfigEntry) -> str:
     user = request.get(KEY_HASS_USER)
     viewer = entry.options.get(CONF_VIEWER_TOKEN)
@@ -392,6 +479,8 @@ async def _proxy_http(
     if base:
         headers["X-Cui-Base"] = base
     headers["X-Cui-Embed"] = "homeassistant"
+    # without it the server limits itself to gzip for proxies that decode and drop Content-Encoding
+    headers["X-Cui-Encoding"] = "passthrough"
 
     session = async_get_clientsession(hass, verify_ssl=False)
     try:
@@ -401,11 +490,14 @@ async def _proxy_http(
             headers=headers,
             data=request.content if request.body_exists else None,
             allow_redirects=False,
-            skip_auto_headers=(hdrs.CONTENT_TYPE,),
+            # only the browser's own Accept-Encoding counts, it gets the body as the server encoded it
+            skip_auto_headers=(hdrs.CONTENT_TYPE, hdrs.ACCEPT_ENCODING),
+            auto_decompress=False,
+            timeout=PROXY_TIMEOUT,
         ) as upstream:
             response = web.StreamResponse(status=upstream.status)
             for name, value in upstream.headers.items():
-                if name in HOP_BY_HOP:
+                if name in RESPONSE_HOP_BY_HOP:
                     continue
                 if name.lower() == "content-security-policy":
                     value = _strip_csp_upgrade(value)
@@ -414,8 +506,11 @@ async def _proxy_http(
             async for chunk in upstream.content.iter_chunked(65536):
                 await response.write(chunk)
             return response
+    except TimeoutError as err:
+        _LOGGER.debug("Proxy request to %s timed out", path)
+        raise web.HTTPGatewayTimeout from err
     except aiohttp.ClientError as err:
-        _LOGGER.debug("Proxy request to %s failed: %s", path, err)
+        _LOGGER.debug("Proxy request to %s failed: %s", path, _describe_error(err))
         raise web.HTTPBadGateway from err
 
 
@@ -440,6 +535,7 @@ async def _proxy_ws(request: web.Request, entry: ConfigEntry, path: str, token: 
         autoclose=False,
         autoping=False,
         max_msg_size=MAX_WS_MESSAGE_SIZE,
+        compress=not _is_video_relay(path),
     )
     await ws_server.prepare(request)
 
@@ -452,24 +548,60 @@ async def _proxy_ws(request: web.Request, entry: ConfigEntry, path: str, token: 
             autoping=False,
             max_msg_size=MAX_WS_MESSAGE_SIZE,
         ) as ws_client:
-            await asyncio.wait(
-                [
-                    asyncio.create_task(_websocket_forward(ws_server, ws_client)),
-                    asyncio.create_task(_websocket_forward(ws_client, ws_server)),
-                ],
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-    except aiohttp.ClientError as err:
-        _LOGGER.warning("Proxy WebSocket to %s failed: %s", path, err)
-        await ws_server.close(code=aiohttp.WSCloseCode.INTERNAL_ERROR)
+            to_upstream = asyncio.create_task(_websocket_forward(ws_server, ws_client))
+            to_browser = asyncio.create_task(_websocket_forward(ws_client, ws_server))
+            forwards = (to_upstream, to_browser)
+            try:
+                await asyncio.wait(forwards, return_when=asyncio.FIRST_COMPLETED)
+            finally:
+                for task in forwards:
+                    task.cancel()
+                await asyncio.wait(forwards)
+            if not to_upstream.cancelled() and to_upstream.result() is not None:
+                await ws_server.close()
+            else:
+                last = None if to_browser.cancelled() else to_browser.result()
+                code, reason = _browser_close(last)
+                await ws_server.close(code=code, message=reason)
+    except (aiohttp.ClientError, TimeoutError) as err:
+        _LOGGER.warning("Proxy WebSocket to %s failed: %s", path, _describe_error(err))
+        await ws_server.close(code=WS_UPSTREAM_LOST, message=b"upstream lost")
 
     return ws_server
+
+
+def _browser_close(last: aiohttp.WSMessage | None) -> tuple[int, bytes]:
+    if last is None or last.type is not aiohttp.WSMsgType.CLOSE:
+        return WS_UPSTREAM_LOST, b"upstream lost"
+    code = int(last.data)
+    reason = (last.extra or "").encode()
+    if code == WS_UNAUTHORIZED:
+        # the integration's own token was rejected, a fresh browser token cannot fix that
+        return WS_FORBIDDEN, b"forbidden: integration token rejected"
+    if not _is_sendable_close_code(code):
+        return aiohttp.WSCloseCode.OK, reason
+    return code, reason
+
+
+def _is_sendable_close_code(code: int) -> bool:
+    return (1000 <= code <= 1014 and code not in (1004, 1005, 1006)) or 3000 <= code <= 4999
+
+
+def _describe_error(err: Exception) -> str:
+    if isinstance(err, aiohttp.ClientResponseError):
+        return f"{err.status} {err.message}"
+    return type(err).__name__
 
 
 def _strip_csp_upgrade(value: str) -> str:
     # camera.ui's CSP upgrades http->https
     directives = [d for d in value.split(";") if d.strip().lower() != "upgrade-insecure-requests"]
     return ";".join(directives)
+
+
+def _is_video_relay(path: str) -> bool:
+    path = path.strip("/")
+    return path == VIDEO_RELAY_PATH or path.startswith(f"{VIDEO_RELAY_PATH}/")
 
 
 def _is_websocket(request: web.Request) -> bool:
@@ -500,9 +632,10 @@ def _get_entry_by_proxy_secret(hass: HomeAssistant, secret: str) -> ConfigEntry 
 async def _websocket_forward(
     ws_from: web.WebSocketResponse | aiohttp.ClientWebSocketResponse,
     ws_to: web.WebSocketResponse | aiohttp.ClientWebSocketResponse,
-) -> None:
+) -> aiohttp.WSMessage | None:
     try:
-        async for msg in ws_from:
+        while True:
+            msg = await ws_from.receive()
             if msg.type is aiohttp.WSMsgType.TEXT:
                 await ws_to.send_str(msg.data)
             elif msg.type is aiohttp.WSMsgType.BINARY:
@@ -511,12 +644,7 @@ async def _websocket_forward(
                 await ws_to.ping()
             elif msg.type is aiohttp.WSMsgType.PONG:
                 await ws_to.pong()
-            elif ws_to.closed:
-                # close_code is None on an abrupt drop, and extra carries the peer's
-                # close reason as text while aiohttp wants bytes
-                await ws_to.close(
-                    code=ws_to.close_code or aiohttp.WSCloseCode.OK,
-                    message=(msg.extra or "").encode(),
-                )
+            else:
+                return msg
     except RuntimeError, ConnectionResetError:
-        pass
+        return None

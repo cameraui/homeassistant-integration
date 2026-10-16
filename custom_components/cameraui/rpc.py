@@ -18,6 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 NVR_PLUGIN = "@camera.ui/camera-ui-nvr"
 CORE_MANAGER_RPC = "coreManager.rpc"
 IDLE_TIMEOUT = 5 * 60
+CONNECT_TIMEOUT = 15
 PLUGIN_CHECK_INTERVAL = 60
 THUMBNAIL_CACHE_SIZE = 300
 EVENT_PAGE = 200
@@ -36,7 +37,7 @@ class CameraUiRpc:
         self._port = port
         self._token = token
         self._client: RPCClient | None = None
-        self._lock = asyncio.Lock()
+        self._connecting: asyncio.Task[RPCClient] | None = None
         self._idle_handle: asyncio.TimerHandle | None = None
         self._nvr_id: str | None = None
         self._nvr_checked = 0.0
@@ -100,7 +101,8 @@ class CameraUiRpc:
             return cached
         nvr = await self._nvr()
         try:
-            thumbnails = await nvr.getEventThumbnails(camera_id, start_ms, event_id)
+            # only the picture shown here; NVRs without the keys argument ignore it and send all
+            thumbnails = await nvr.getEventThumbnails(camera_id, start_ms, event_id, ["event"])
         except Exception as err:  # noqa: BLE001
             raise CameraUiRpcError(f"Thumbnail failed: {err}") from err
         image = thumbnails.get("event") if thumbnails else None
@@ -125,6 +127,13 @@ class CameraUiRpc:
         return str(url)
 
     async def close(self) -> None:
+        connecting, self._connecting = self._connecting, None
+        if connecting:
+            connecting.cancel()
+            await asyncio.wait([connecting])
+        await self._drop_client()
+
+    async def _drop_client(self) -> None:
         if self._idle_handle:
             self._idle_handle.cancel()
             self._idle_handle = None
@@ -140,13 +149,27 @@ class CameraUiRpc:
         client = await self._ensure()
         return client.create_proxy(f"plugin.{plugin_id}.child.rpc")
 
+    # callers share one connect, so a caller that gives up does not abort it for the others
     async def _ensure(self) -> RPCClient:
-        async with self._lock:
-            if self._client and self._client.is_connected:
-                self._touch()
-                return self._client
-            if self._client:
-                await self.close()
+        if self._client and self._client.is_connected:
+            self._touch()
+            return self._client
+        if not self._connecting:
+            self._connecting = asyncio.get_running_loop().create_task(self._connect())
+        connecting = self._connecting
+        try:
+            client = await asyncio.shield(connecting)
+        except asyncio.CancelledError:
+            current = asyncio.current_task()
+            if connecting.cancelled() and current and not current.cancelling():
+                raise CameraUiRpcError("Connection closed") from None
+            raise
+        self._touch()
+        return client
+
+    async def _connect(self) -> RPCClient:
+        try:
+            await self._drop_client()
             conn_id = secrets.token_urlsafe(12)
             url = URL.build(
                 scheme="wss",
@@ -167,15 +190,24 @@ class CameraUiRpc:
                 }
             )
             try:
-                await client.connect()
-            except Exception as err:  # noqa: BLE001
-                raise CameraUiRpcError(f"Cannot connect to the camera.ui RPC bus: {err}") from err
+                async with asyncio.timeout(CONNECT_TIMEOUT):
+                    await client.connect()
+            except BaseException as err:
+                with contextlib.suppress(Exception):
+                    await client.disconnect()
+                if isinstance(err, Exception):
+                    raise CameraUiRpcError(
+                        f"Cannot connect to the camera.ui RPC bus: {str(err) or type(err).__name__}"
+                    ) from err
+                raise
             self._client = client
-            self._touch()
             return client
+        finally:
+            if self._connecting is asyncio.current_task():
+                self._connecting = None
 
     def _touch(self) -> None:
         if self._idle_handle:
             self._idle_handle.cancel()
         loop = asyncio.get_running_loop()
-        self._idle_handle = loop.call_later(IDLE_TIMEOUT, lambda: loop.create_task(self.close()))
+        self._idle_handle = loop.call_later(IDLE_TIMEOUT, lambda: loop.create_task(self._drop_client()))

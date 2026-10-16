@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from collections.abc import Callable
 from typing import Any
@@ -8,6 +10,8 @@ import aiohttp
 import socketio
 
 _LOGGER = logging.getLogger(__name__)
+
+EVENTS_SHUTDOWN_TIMEOUT = 5
 
 
 class CameraUiApiError(Exception):
@@ -31,6 +35,7 @@ class CameraUiClient:
         self._sio: socketio.AsyncClient | None = None
         self._detection_callbacks: list[Callable[[dict[str, Any]], None]] = []
         self._connection_callbacks: list[Callable[[bool], None]] = []
+        self._subscribed_callbacks: list[Callable[[list[str] | None], None]] = []
         self._sensor_callbacks: list[Callable[[dict[str, Any]], None]] = []
         self._update_callbacks: list[Callable[[], None]] = []
 
@@ -55,7 +60,7 @@ class CameraUiClient:
         if response.status in (401, 403):
             raise CameraUiAuthError(f"Authentication failed ({response.status})", status=response.status)
         if response.status >= 400:
-            raise CameraUiApiError(f"Request to {path} returned {response.status}", status=response.status)
+            raise CameraUiApiError(await _error_message(response, path), status=response.status)
         return response
 
     # servers older than the cards bundle answer 404 here, the integration then skips the resource;
@@ -203,6 +208,10 @@ class CameraUiClient:
     def on_connection(self, callback: Callable[[bool], None]) -> None:
         self._connection_callbacks.append(callback)
 
+    # active: cameras with a running detection, None from servers that do not report them
+    def on_subscribed(self, callback: Callable[[list[str] | None], None]) -> None:
+        self._subscribed_callbacks.append(callback)
+
     def on_sensor(self, callback: Callable[[dict[str, Any]], None]) -> None:
         self._sensor_callbacks.append(callback)
 
@@ -221,11 +230,17 @@ class CameraUiClient:
         sio = socketio.AsyncClient(http_session=self._session, reconnection=True, reconnection_delay=5)
         self._sio = sio
 
-        @sio.event(namespace="/events")
-        async def connect() -> None:
-            await sio.emit("subscribe", {"cameraIds": "all"}, namespace="/events")
+        # connected only after the ack, else a detection that ended in the outage shows on for a moment
+        def subscribed(ack: Any = None) -> None:
+            active = ack.get("active") if isinstance(ack, dict) else None
+            for listener in self._subscribed_callbacks:
+                listener(active if isinstance(active, list) else None)
             for callback in self._connection_callbacks:
                 callback(True)
+
+        @sio.event(namespace="/events")
+        async def connect() -> None:
+            await sio.emit("subscribe", {"cameraIds": "all"}, namespace="/events", callback=subscribed)
 
         @sio.event(namespace="/events")
         async def disconnect() -> None:
@@ -262,9 +277,21 @@ class CameraUiClient:
             raise CameraUiApiError(f"Event socket connection failed: {err}") from err
 
     async def disconnect_events(self) -> None:
-        if self._sio:
-            sio = self._sio
-            self._sio = None
+        sio, self._sio = self._sio, None
+        if not sio:
+            return
+        # disconnect() alone leaves a running reconnect loop alive
+        sio.reconnection = False
+        try:
+            # shutdown() waits out a reconnect dial, which a mute host holds for 30 s
+            async with asyncio.timeout(EVENTS_SHUTDOWN_TIMEOUT):
+                await sio.shutdown()
+        except TimeoutError:
+            # cancelling the dial skips the reconnect loop's own cleanup
+            with contextlib.suppress(ValueError):
+                socketio.base_client.reconnecting_clients.remove(sio)
+        # a reconnect attempt that was already dialing can still land, or stop halfway
+        if sio.connected or sio.eio.state == "connected":
             await sio.disconnect()
 
 
@@ -272,3 +299,12 @@ def bundle_tag(headers: Any) -> str:
     raw = headers.get("ETag") or headers.get("Last-Modified") or ""
     tag = "".join(ch for ch in raw if ch.isalnum())[-12:]
     return tag or "0"
+
+
+async def _error_message(response: aiohttp.ClientResponse, path: str) -> str:
+    message = f"Request to {path} returned {response.status}"
+    with contextlib.suppress(aiohttp.ClientError, ValueError):
+        body = await response.json(content_type=None)
+        if isinstance(body, dict) and isinstance(body.get("message"), str) and body["message"]:
+            return f"{message}: {body['message']}"
+    return message

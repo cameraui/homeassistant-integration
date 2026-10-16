@@ -17,15 +17,24 @@ CARD_ACCESS_ADMINS = "admins"
 CARD_ACCESS_ALL = "all_users"
 
 SIGNAL_DETECTION = f"{DOMAIN}_detection"
-SIGNAL_CONNECTION = f"{DOMAIN}_connection"
-SIGNAL_SENSOR_NEW = f"{DOMAIN}_sensor_new"
-SIGNAL_SENSOR_ASSIGNED = f"{DOMAIN}_sensor_assigned"
 
 # fired on the HA event bus for automations to trigger on
 EVENT_CAMERAUI = f"{DOMAIN}_event"
 
 # object-detection labels surfaced as binary sensors; mirrors the SDK OBJECT_DETECTION_LABELS
 OBJECT_DETECTION_LABELS = ("person", "vehicle", "animal")
+
+
+def signal_connection(entry_id: str) -> str:
+    return f"{DOMAIN}_connection_{entry_id}"
+
+
+def signal_sensor_new(entry_id: str) -> str:
+    return f"{DOMAIN}_sensor_new_{entry_id}"
+
+
+def signal_sensor_assigned(entry_id: str) -> str:
+    return f"{DOMAIN}_sensor_assigned_{entry_id}"
 
 
 def signal_sensor_update(sensor_id: str) -> str:

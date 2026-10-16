@@ -11,8 +11,8 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from .api import CameraUiApiError
 from .const import (
     DOMAIN,
-    SIGNAL_SENSOR_ASSIGNED,
-    SIGNAL_SENSOR_NEW,
+    signal_sensor_assigned,
+    signal_sensor_new,
     signal_sensor_remove,
     signal_sensor_update,
 )
@@ -25,6 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 class CameraUiSensorManager:
     def __init__(self, hass: HomeAssistant, coordinator: CameraUiCoordinator) -> None:
         self.hass = hass
+        self.entry_id = coordinator.config_entry.entry_id
         self._coordinator = coordinator
         self._client = coordinator.client
         self._sensors: dict[str, dict[str, Any]] = {}
@@ -89,7 +90,7 @@ class CameraUiSensorManager:
             existed = sensor_id in self._sensors
             self._sensors[sensor_id] = sensor
             if not existed and emit_new:
-                async_dispatcher_send(self.hass, SIGNAL_SENSOR_NEW, sensor)
+                async_dispatcher_send(self.hass, signal_sensor_new(self.entry_id), sensor)
             elif existed:
                 async_dispatcher_send(self.hass, signal_sensor_update(sensor_id))
 
@@ -116,7 +117,7 @@ class CameraUiSensorManager:
         if existed:
             async_dispatcher_send(self.hass, signal_sensor_update(sensor_id))
         else:
-            async_dispatcher_send(self.hass, SIGNAL_SENSOR_NEW, sensor)
+            async_dispatcher_send(self.hass, signal_sensor_new(self.entry_id), sensor)
 
     def _handle_push(self, message: dict[str, Any]) -> None:
         sensor_id = message.get("sensorId")
@@ -154,7 +155,7 @@ class CameraUiSensorManager:
                 if key in message:
                     sensor[key] = message[key]
             if set(sensor.get("assignedCameraIds", [])) - previous_assigned:
-                async_dispatcher_send(self.hass, SIGNAL_SENSOR_ASSIGNED, sensor)
+                async_dispatcher_send(self.hass, signal_sensor_assigned(self.entry_id), sensor)
         else:
             return
 

@@ -64,22 +64,30 @@ class CameraUiMediaSource(MediaSource):
         raise MediaSourceError("Nothing to browse here")
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
+        # the event's start as fifth part spares the NVR a query for the whole day, older ids have four
         parts = [part for part in (item.identifier or "").split("/") if part]
-        if len(parts) != 4:
+        if len(parts) not in (4, 5):
             raise Unresolvable("Not a camera.ui event")
         entry = next((entry for entry in _loaded_entries(self.hass) if entry.entry_id == parts[0]), None)
         if not entry:
             raise Unresolvable("Unknown camera.ui server")
         camera_id, day, event_id = parts[1], parts[2], parts[3]
+        clips = entry.runtime_data.clips
         try:
-            event = await async_find_event(entry, camera_id, day, event_id)
-            if not event:
-                raise Unresolvable("The recording is no longer available")
-            # start the export now, the player's request joins it a moment later
-            await entry.runtime_data.clips.open(camera_id, event_id, event["startTime"], event["endTime"])
+            start = int(parts[4]) if len(parts) == 5 else None
+            if await clips.cached(event_id) is None:
+                event = await async_find_event(entry, camera_id, day, event_id, start)
+                if not event:
+                    raise Unresolvable("The recording is no longer available")
+                start = int(event["startTime"])
+                # start the export now, the player's request joins it a moment later
+                await clips.open(camera_id, event_id, event["startTime"], event["endTime"])
+        except ValueError as err:
+            raise Unresolvable("Not a camera.ui event") from err
         except CameraUiRpcError as err:
             raise Unresolvable(str(err)) from err
-        return PlayMedia(f"{MEDIA_PATH}/{entry.entry_id}/clip/{camera_id}/{day}/{event_id}", "video/mp4")
+        url = f"{MEDIA_PATH}/{entry.entry_id}/clip/{camera_id}/{day}/{event_id}"
+        return PlayMedia(url if start is None else f"{url}/{start}", "video/mp4")
 
     async def _browse_entry(self, entry: CameraUiConfigEntry) -> BrowseMediaSource:
         try:
@@ -154,7 +162,7 @@ class CameraUiMediaSource(MediaSource):
             children.append(
                 BrowseMediaSource(
                     domain=DOMAIN,
-                    identifier=f"{entry.entry_id}/{event['cameraId']}/{day}/{event['id']}",
+                    identifier=f"{entry.entry_id}/{event['cameraId']}/{day}/{event['id']}/{event['startTime']}",
                     media_class=MediaClass.VIDEO,
                     media_content_type=MediaType.VIDEO,
                     title=title,

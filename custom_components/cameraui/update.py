@@ -170,7 +170,10 @@ class CameraUiServerUpdateEntity(CoordinatorEntity[CameraUiUpdateCoordinator], U
                         f"Backup before the update failed, update not started: {err}"
                     ) from err
                 _LOGGER.info("Backup %s written before updating camera.ui to %s", filename, target)
-            await self.coordinator.client.update_server(target)
+            try:
+                await self.coordinator.client.update_server(target)
+            except CameraUiApiError as err:
+                raise HomeAssistantError(f"Update not started: {err}") from err
             # the update only stages the new version, the restart applies it
             await self.coordinator.client.restart_server()
         finally:

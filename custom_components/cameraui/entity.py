@@ -15,9 +15,9 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
-    SIGNAL_CONNECTION,
-    SIGNAL_SENSOR_ASSIGNED,
-    SIGNAL_SENSOR_NEW,
+    signal_connection,
+    signal_sensor_assigned,
+    signal_sensor_new,
     signal_sensor_remove,
     signal_sensor_update,
 )
@@ -53,7 +53,11 @@ class CameraUiEntity(CoordinatorEntity[CameraUiCoordinator]):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_CONNECTION, self._handle_connection))
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, signal_connection(self.coordinator.config_entry.entry_id), self._handle_connection
+            )
+        )
 
     @callback
     def _handle_connection(self, connected: bool) -> None:
@@ -125,7 +129,11 @@ class CameraUiSensorEntity(Entity):
         self.async_on_remove(
             async_dispatcher_connect(self.hass, signal_sensor_remove(self._sensor_id), self._handle_remove)
         )
-        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_CONNECTION, self._handle_connection))
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, signal_connection(self._manager.entry_id), self._handle_connection
+            )
+        )
 
     @callback
     def _handle_update(self) -> None:
@@ -178,7 +186,7 @@ def async_setup_sensor_platform(
     for sensor in manager.sensors_for_platform(platform):
         add_sensor(sensor)
 
-    entry.async_on_unload(async_dispatcher_connect(hass, SIGNAL_SENSOR_NEW, add_sensor))
+    entry.async_on_unload(async_dispatcher_connect(hass, signal_sensor_new(entry.entry_id), add_sensor))
 
 
 def async_setup_detection_entities(
@@ -208,5 +216,5 @@ def async_setup_detection_entities(
             for camera_id in sensor.get("assignedCameraIds", []):
                 add_for(camera_id)
 
-    entry.async_on_unload(async_dispatcher_connect(hass, SIGNAL_SENSOR_NEW, on_new))
-    entry.async_on_unload(async_dispatcher_connect(hass, SIGNAL_SENSOR_ASSIGNED, on_new))
+    entry.async_on_unload(async_dispatcher_connect(hass, signal_sensor_new(entry.entry_id), on_new))
+    entry.async_on_unload(async_dispatcher_connect(hass, signal_sensor_assigned(entry.entry_id), on_new))

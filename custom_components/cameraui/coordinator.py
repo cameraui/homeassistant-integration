@@ -11,7 +11,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import CameraUiApiError, CameraUiAuthError, CameraUiClient
-from .const import DOMAIN, EVENT_CAMERAUI, SIGNAL_CONNECTION, SIGNAL_DETECTION
+from .const import DOMAIN, EVENT_CAMERAUI, SIGNAL_DETECTION, signal_connection
 
 if TYPE_CHECKING:
     from . import CameraUiConfigEntry
@@ -34,7 +34,9 @@ class CameraUiCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         )
         self.client = client
         self._detections: dict[str, dict[str, Any]] = {}
+        self._server_reports_active = False
         client.on_detection(self._handle_detection)
+        client.on_subscribed(self._handle_subscribed)
         client.on_connection(self._handle_connection)
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
@@ -70,10 +72,18 @@ class CameraUiCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
             return
 
         msg_type = message.get("type")
-        if msg_type == "start":
-            self._detections[camera_id] = {"labels": set(), "attributes": {}}
+        state = self._detections.get(camera_id)
+        if state and state["event"].get("id") != event.get("id"):
+            # the end of the tracked event fell into a socket outage
+            self._end_detection(state)
+            state = None
+        if state is None:
+            state = self._detections[camera_id] = {"labels": set(), "attributes": {}}
+        elif msg_type == "start":
+            # the server replays the start of an event that is still running
+            msg_type = "update"
 
-        state = self._detections.setdefault(camera_id, {"labels": set(), "attributes": {}})
+        state["event"] = event
         labels_grew = False
         attrs_grew = False
         for label in message.get("labels", []):
@@ -137,4 +147,18 @@ class CameraUiCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         )
 
     def _handle_connection(self, connected: bool) -> None:
-        async_dispatcher_send(self.hass, SIGNAL_CONNECTION, connected)
+        # a server without the active list never reports an end that falls into the outage
+        if not connected and not self._server_reports_active:
+            for state in list(self._detections.values()):
+                self._end_detection(state)
+        async_dispatcher_send(self.hass, signal_connection(self.config_entry.entry_id), connected)
+
+    def _handle_subscribed(self, active: list[str] | None) -> None:
+        self._server_reports_active = active is not None
+        running = set(active or ())
+        for camera_id, state in list(self._detections.items()):
+            if camera_id not in running:
+                self._end_detection(state)
+
+    def _end_detection(self, state: dict[str, Any]) -> None:
+        self._handle_detection({"type": "end", "event": {**state["event"], "state": "ended"}})
