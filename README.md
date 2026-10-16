@@ -81,8 +81,10 @@ target:
   entity_id: media_player.living_room_tv
 data:
   media_content_type: video
-  media_content_id: media-source://cameraui/<entry id>/<camera id>/2026-08-30/<event id>
+  media_content_id: media-source://cameraui/<entry id>/<camera id>/2026-08-30/<event id>/<start ms>
 ```
+
+The last part is the event start in milliseconds, as the media browser hands it out. It is optional, but without it only the newest 600 events of that day can be played.
 
 Clips come from the sub stream by default, which keeps them small over remote connections; switch to the main stream under Settings → Devices & services → camera.ui → Configure. They are served as recorded, so H.265 recordings play only where the player can decode them. Needs the NVR plugin; the folder says so when it is missing.
 
