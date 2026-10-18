@@ -63,7 +63,7 @@ class CameraUiCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
             # sensor_* devices belong to the sensor manager, server_* is the hub
             if camera_id and not camera_id.startswith(("sensor_", "server_")) and camera_id not in cameras:
                 _LOGGER.debug("Removing device for deleted camera %s", camera_id)
-                registry.async_update_device(device.id, remove_config_entry_id=entry_id)
+                registry.async_remove_device(device.id)
 
     def _handle_detection(self, message: dict[str, Any]) -> None:
         event = message.get("event", {})

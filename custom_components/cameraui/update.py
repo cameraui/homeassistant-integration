@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from .api import CameraUiApiError, CameraUiClient
 from .const import CONF_ALLOW_UPDATES, DOMAIN
+from .devices import async_get_device
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,11 +83,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: Any, async_add_entities:
 
     # the registry does not reliably pick up a changed name from device_info
     # on existing devices — rename explicitly (name_by_user still wins)
-    registry = dr.async_get(hass)
     if (
-        existing := registry.async_get_device(identifiers={(DOMAIN, f"server_{entry.entry_id}")})
+        existing := async_get_device(hass, (DOMAIN, f"server_{entry.entry_id}"), entry.entry_id)
     ) and existing.name != device["name"]:
-        registry.async_update_device(existing.id, name=device["name"])
+        dr.async_get(hass).async_update_device(existing.id, name=device["name"])
 
     entities: list[UpdateEntity] = [CameraUiServerUpdateEntity(coordinator, entry, device, allow_install)]
     known_plugins: set[str] = set()

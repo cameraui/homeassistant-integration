@@ -17,6 +17,7 @@
 - **Live video through Home Assistant needs less CPU.**
 - **The camera.ui panel and the dashboard cards load faster on slow connections.** Replies from camera.ui reach the browser compressed. Needs camera.ui 2.4.0.
 - **A server update that camera.ui refuses shows the reason**, for example a worker that would no longer connect to the new version, instead of only an error code.
+- **Home Assistant 2026.9 and newer no longer log warnings about the integration.** They asked for a bug report about device handling that stops working in Home Assistant 2027.8.
 
 ## 0.4.3
 

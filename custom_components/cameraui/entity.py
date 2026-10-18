@@ -22,6 +22,7 @@ from .const import (
     signal_sensor_update,
 )
 from .coordinator import CameraUiCoordinator
+from .devices import async_get_device, async_set_via_device
 from .sensor_manager import CameraUiSensorManager
 from .sensor_map import sensor_platform
 
@@ -87,7 +88,9 @@ class CameraUiSensorEntity(Entity):
                 model=sensor.get("pluginName"),
             )
             if len(assigned) == 1:
-                self._attr_device_info["via_device"] = (DOMAIN, assigned[0])
+                async_set_via_device(
+                    manager.hass, self._attr_device_info, (DOMAIN, assigned[0]), manager.entry_id
+                )
         else:
             self._attr_device_info = DeviceInfo(
                 identifiers={(DOMAIN, assigned[0])},
@@ -146,11 +149,10 @@ class CameraUiSensorEntity(Entity):
         sensor = self._sensor
         if not sensor:
             return
-        registry = dr.async_get(self.hass)
-        device = registry.async_get_device(identifiers={(DOMAIN, f"sensor_{self._sensor_id}")})
+        device = async_get_device(self.hass, (DOMAIN, f"sensor_{self._sensor_id}"), self._manager.entry_id)
         name = sensor.get("displayName") or sensor.get("name")
         if device and name and device.name != name:
-            registry.async_update_device(device.id, name=name)
+            dr.async_get(self.hass).async_update_device(device.id, name=name)
 
     @callback
     def _handle_connection(self, connected: bool) -> None:

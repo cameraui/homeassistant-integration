@@ -17,6 +17,7 @@ from .const import (
     signal_sensor_update,
 )
 from .coordinator import CameraUiCoordinator
+from .devices import async_get_device
 from .sensor_map import sensor_platform
 
 _LOGGER = logging.getLogger(__name__)
@@ -100,13 +101,9 @@ class CameraUiSensorManager:
 
     def _remove_sensor(self, sensor_id: str) -> None:
         async_dispatcher_send(self.hass, signal_sensor_remove(sensor_id))
-        registry = dr.async_get(self.hass)
-        device = registry.async_get_device(identifiers={(DOMAIN, f"sensor_{sensor_id}")})
+        device = async_get_device(self.hass, (DOMAIN, f"sensor_{sensor_id}"), self.entry_id)
         if device:
-            registry.async_update_device(
-                device.id,
-                remove_config_entry_id=self._coordinator.config_entry.entry_id,
-            )
+            dr.async_get(self.hass).async_remove_device(device.id)
 
     async def _add_sensor(self, sensor_id: str) -> None:
         sensor = await self._client.get_sensor(sensor_id)
