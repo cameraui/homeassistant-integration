@@ -80,7 +80,9 @@ class CameraUiPanel extends HTMLElement {
   // HA hands the panel only the path, the query (startTs deep links) stays in the location
   set route(route) {
     const base = route && typeof route.path === 'string' ? route.path : '';
-    const path = base ? `${base}${window.location.search || ''}` : '';
+    const path = base
+      ? restoreQuery(`${base}${window.location.search || ''}`)
+      : '';
     if (path === this._routePath) return;
     this._routePath = path;
     if (!this._iframe) return;
@@ -309,6 +311,12 @@ class CameraUiPanel extends HTMLElement {
       }),
     );
   }
+}
+
+function restoreQuery(path) {
+  // the HA iOS app cuts "?external_auth=1" out of its saved URL, leaving "&startTs=1" on the path
+  if (path.includes('?')) return path;
+  return path.replace(/&(?=[A-Za-z][\w-]*=)/, '?');
 }
 
 customElements.define('cameraui-panel', CameraUiPanel);
