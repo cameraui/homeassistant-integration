@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- **The camera.ui panel stays on the page you were on when it reloads.** A reload, pull to refresh in the Home Assistant app or the next app start went back to the last camera opened from a notification. Needs camera.ui 2.4.1.
+- **The Home Assistant iOS app no longer reopens the camera.ui panel on a camera that can't be found.** It happened on the next app start after you opened a camera.ui notification.
+
 ## 0.5.0
 
 **Needs Home Assistant 2026.3 or newer.** Update Home Assistant first, HACS does not offer this version to older installations.
