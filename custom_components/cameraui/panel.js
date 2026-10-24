@@ -79,6 +79,7 @@ class CameraUiPanel extends HTMLElement {
 
   // HA hands the panel only the path, the query (startTs deep links) stays in the location
   set route(route) {
+    if (route && typeof route.prefix === 'string') this._prefix = route.prefix;
     const base = route && typeof route.path === 'string' ? route.path : '';
     const path = base
       ? restoreQuery(`${base}${window.location.search || ''}`)
@@ -298,8 +299,28 @@ class CameraUiPanel extends HTMLElement {
     if (!this._iframe || event.source !== this._iframe.contentWindow) return;
     if (event.origin !== window.location.origin) return;
     const data = event.data;
-    if (!data || data.type !== 'cui:menu') return;
-    this._toggleMenu(typeof data.open === 'boolean' ? data.open : undefined);
+    if (!data) return;
+    if (data.type === 'cui:menu') {
+      this._toggleMenu(typeof data.open === 'boolean' ? data.open : undefined);
+    } else if (data.type === 'cui:route') {
+      this._syncLocation(data.path);
+    }
+  }
+
+  _syncLocation(path) {
+    const prefix = this._prefix;
+    const { pathname, search, hash } = window.location;
+    if (typeof path !== 'string' || !path.startsWith('/') || !prefix) return;
+    if (pathname !== prefix && !pathname.startsWith(`${prefix}/`)) return;
+    this._routePath = path;
+    this._postedPath = path;
+    const target = `${prefix}${path}`;
+    if (target === `${pathname}${search}${hash}`) return;
+    // HA keeps the last deep link in its address otherwise, a reload or the iOS app's restore reopens it
+    history.replaceState(history.state, '', target);
+    window.dispatchEvent(
+      new CustomEvent('location-changed', { detail: { replace: true } }),
+    );
   }
 
   _toggleMenu(open) {
