@@ -96,6 +96,7 @@ class CameraUiProxyView(HomeAssistantView):
     put = _handle
     delete = _handle
     patch = _handle
+    head = _handle
 
 
 class CameraUiAuthProxyView(HomeAssistantView):
@@ -124,6 +125,7 @@ class CameraUiAuthProxyView(HomeAssistantView):
     put = _handle
     delete = _handle
     patch = _handle
+    head = _handle
 
 
 class CameraUiCardsAssetView(HomeAssistantView):
