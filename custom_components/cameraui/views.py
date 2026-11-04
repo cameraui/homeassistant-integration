@@ -88,7 +88,7 @@ class CameraUiProxyView(HomeAssistantView):
         if _is_websocket(request):
             return await _proxy_ws(request, entry, path, entry.data[CONF_TOKEN])
         return await _proxy_http(
-            request, entry, path, entry.data[CONF_TOKEN], base=f"{PROXY_PREFIX}/{secret}/"
+            request, entry, _raw_proxy_path(request), entry.data[CONF_TOKEN], base=f"{PROXY_PREFIX}/{secret}/"
         )
 
     get = _handle
@@ -118,7 +118,7 @@ class CameraUiAuthProxyView(HomeAssistantView):
         token = _card_token(request, entry)
         if _is_websocket(request):
             return await _proxy_ws(request, entry, path, token)
-        return await _proxy_http(request, entry, path, token, base=None)
+        return await _proxy_http(request, entry, _raw_proxy_path(request), token, base=None)
 
     get = _handle
     post = _handle
@@ -473,8 +473,8 @@ async def _proxy_http(
         host=entry.data[CONF_HOST],
         port=entry.data[CONF_PORT],
         path=f"/{path}",
-        query=query,
-    )
+        encoded=True,
+    ).with_query(query)
 
     headers = {name: value for name, value in request.headers.items() if name not in HOP_BY_HOP}
     headers[hdrs.AUTHORIZATION] = f"Bearer {token}"
@@ -604,6 +604,11 @@ def _strip_csp_upgrade(value: str) -> str:
 def _is_video_relay(path: str) -> bool:
     path = path.strip("/")
     return path == VIDEO_RELAY_PATH or path.startswith(f"{VIDEO_RELAY_PATH}/")
+
+
+def _raw_proxy_path(request: web.Request) -> str:
+    # match_info decodes %2F, an encoded camera name would reach the server as extra path segments
+    return request.rel_url.raw_path.split("/", 5)[5]
 
 
 def _is_websocket(request: web.Request) -> bool:

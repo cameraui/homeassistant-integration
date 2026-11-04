@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3
+
+- **Cameras with `/`, `#`, `?` or `%` in their name work in Home Assistant.** The camera entity showed no picture and no live view. In the camera.ui panel and the dashboard cards they open with camera.ui 2.4.7.
+
 ## 0.5.2
 
 - **Downloads in the camera.ui panel work again.** Clip exports and backups failed with error 405 inside Home Assistant.

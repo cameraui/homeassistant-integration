@@ -5,6 +5,7 @@ import contextlib
 import logging
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import quote
 
 import aiohttp
 import socketio
@@ -106,11 +107,13 @@ class CameraUiClient:
 
     async def get_snapshot(self, camera_name: str, force_new: bool = False) -> bytes:
         params = {"forceNew": "true"} if force_new else None
-        response = await self._request("GET", f"/cameras/{camera_name}/snapshot", params=params)
+        response = await self._request(
+            "GET", f"/cameras/{quote(camera_name, safe='')}/snapshot", params=params
+        )
         return await response.read()
 
     async def get_rtsp_sources(self, camera_name: str) -> list[dict[str, Any]]:
-        response = await self._request("GET", f"/cameras/{camera_name}/rtsp")
+        response = await self._request("GET", f"/cameras/{quote(camera_name, safe='')}/rtsp")
         data = await response.json()
         return data.get("sources", [])
 
