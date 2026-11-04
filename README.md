@@ -4,11 +4,9 @@ Home Assistant integration for [camera.ui](https://github.com/cameraui/camera.ui
 
 ## Installation
 
-Requires [HACS](https://hacs.xyz).
+[![Open in Home Assistant](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cameraui&repository=homeassistant-integration&category=integration)
 
-[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cameraui&repository=homeassistant-integration&category=integration)
-
-1. In HACS, add this repository as a custom repository (⋮ menu → Custom repositories), category **Integration**. Or use the button above.
+1. Use the button above, or in Home Assistant go to Settings → Marketplace → Add from link and enter the URL of this repository. A custom repository needs a GitHub connection, the Marketplace asks for it the first time. Before Home Assistant 2026.11, add it in [HACS](https://hacs.xyz) as a custom repository, category **Integration**.
 2. Install **camera.ui** and restart Home Assistant.
 3. Add it under Settings → Devices & services → Add integration → camera.ui. camera.ui servers on the local network are discovered automatically; otherwise enter host and port.
 4. Enter an API token. Create one in camera.ui under Settings → Account → API tokens, signed in as an admin: controlling sensors (locks, lights, PTZ and the rest) needs admin rights, a viewer token can only watch. The token stays on the Home Assistant server, the browser never sees it.
