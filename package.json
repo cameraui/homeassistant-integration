@@ -5,7 +5,7 @@
   "description": "camera.ui home assistant integration",
   "type": "module",
   "scripts": {
-    "audit": "npm audit fix",
+    "audit": "npm audit fix --min-release-age=0",
     "format:python": "cd custom_components && ruff format && cd ..",
     "format": "npm run format:python",
     "install-updates": "npm i --save",
