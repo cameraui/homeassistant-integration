@@ -156,6 +156,7 @@ class CameraUiSensorManager:
                 "device",
                 "connected",
                 "capabilities",
+                "propertySpecs",
                 "assignedCameraIds",
             ):
                 if key in message:

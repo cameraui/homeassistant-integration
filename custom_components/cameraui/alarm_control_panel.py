@@ -22,6 +22,12 @@ STATE_MAP: dict[str, AlarmControlPanelState] = {
     "triggered": AlarmControlPanelState.TRIGGERED,
 }
 
+ARM_FEATURES: dict[str, AlarmControlPanelEntityFeature] = {
+    "armed_home": AlarmControlPanelEntityFeature.ARM_HOME,
+    "armed_away": AlarmControlPanelEntityFeature.ARM_AWAY,
+    "armed_night": AlarmControlPanelEntityFeature.ARM_NIGHT,
+}
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: CameraUiConfigEntry, async_add_entities: AddEntitiesCallback
@@ -33,11 +39,17 @@ async def async_setup_entry(
 
 class CameraUiAlarmControlPanel(CameraUiSensorEntity, AlarmControlPanelEntity):
     _attr_code_arm_required = False
-    _attr_supported_features = (
-        AlarmControlPanelEntityFeature.ARM_HOME
-        | AlarmControlPanelEntityFeature.ARM_AWAY
-        | AlarmControlPanelEntityFeature.ARM_NIGHT
-    )
+
+    @property
+    def supported_features(self) -> AlarmControlPanelEntityFeature:
+        states = self._semantics.get("states", {})
+        specs = (self._sensor or {}).get("propertySpecs", {})
+        offered = specs.get(self._semantics.get("commandProperty", ""), {}).get("values")
+        features = AlarmControlPanelEntityFeature(0)
+        for name, feature in ARM_FEATURES.items():
+            if offered is None or states.get(name) in offered.values():
+                features |= feature
+        return features
 
     @property
     def alarm_state(self) -> AlarmControlPanelState | None:
