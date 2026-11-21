@@ -66,6 +66,7 @@ class FakeEventsClient:
         self._connection: list[Callable[[bool], None]] = []
         self._subscribed: list[Callable[[list[str] | None], None]] = []
         self._sensor: list[Callable[[dict[str, Any]], None]] = []
+        self.commands: list[tuple[str, str, Any]] = []
 
     def on_detection(self, callback: Callable[[dict[str, Any]], None]) -> None:
         self._detection.append(callback)
@@ -102,3 +103,6 @@ class FakeEventsClient:
 
     async def get_sensor(self, sensor_id: str) -> dict[str, Any] | None:
         return self.sensors.get(sensor_id)
+
+    async def command_sensor(self, sensor_id: str, property_name: str, value: Any) -> None:
+        self.commands.append((sensor_id, property_name, value))

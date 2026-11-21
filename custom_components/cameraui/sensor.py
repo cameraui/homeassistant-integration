@@ -15,9 +15,13 @@ from .coordinator import CameraUiCoordinator
 from .entity import (
     CameraUiEntity,
     CameraUiSensorEntity,
+    CameraUiSensorSetting,
     async_setup_detection_entities,
     async_setup_sensor_platform,
+    async_setup_sensor_settings,
 )
+from .sensor_manager import CameraUiSensorManager
+from .sensor_map import sensor_semantics
 
 PARALLEL_UPDATES = 0
 
@@ -34,6 +38,7 @@ async def async_setup_entry(
 ) -> None:
     coordinator = entry.runtime_data.coordinator
     async_setup_sensor_platform(hass, entry, async_add_entities, Platform.SENSOR, CameraUiMeasurement)
+    async_setup_sensor_settings(hass, entry, async_add_entities, reading_entities)
 
     def make_factory(kind: str) -> Callable[[str], list[CameraUiDetectionValueSensor]]:
         def factory(camera_id: str) -> list[CameraUiDetectionValueSensor]:
@@ -45,18 +50,38 @@ async def async_setup_entry(
         async_setup_detection_entities(hass, entry, async_add_entities, sensor_type, make_factory(kind))
 
 
-class CameraUiMeasurement(CameraUiSensorEntity, SensorEntity):
-    _attr_state_class = SensorStateClass.MEASUREMENT
+def reading_entities(manager: CameraUiSensorManager, sensor: dict[str, Any]) -> list[CameraUiReading]:
+    return [
+        CameraUiReading(manager, sensor, reading) for reading in sensor_semantics(sensor).get("readings", [])
+    ]
 
+
+def sensor_device_class(raw: str | None) -> SensorDeviceClass | None:
+    try:
+        return SensorDeviceClass(raw) if raw else None
+    except ValueError:
+        return None
+
+
+class CameraUiMeasurement(CameraUiSensorEntity, SensorEntity):
     @property
     def device_class(self) -> SensorDeviceClass | None:
-        raw = self._semantics.get("deviceClass")
-        if not raw:
-            return None
-        try:
-            return SensorDeviceClass(raw)
-        except ValueError:
-            return None
+        return sensor_device_class(self._semantics.get("deviceClass"))
+
+    @property
+    def translation_key(self) -> str | None:
+        # a level names its states, they are translated under the property
+        return self._semantics.get("stateProperty") if self._is_level else None
+
+    @property
+    def state_class(self) -> SensorStateClass | None:
+        return None if self._is_level else SensorStateClass.MEASUREMENT
+
+    @property
+    def options(self) -> list[str] | None:
+        return (
+            [str(value) for value in self._semantics.get("states", {}).values()] if self._is_level else None
+        )
 
     @property
     def native_unit_of_measurement(self) -> str | None:
@@ -67,8 +92,40 @@ class CameraUiMeasurement(CameraUiSensorEntity, SensorEntity):
         return EntityCategory.DIAGNOSTIC if self._semantics.get("diagnostic") else None
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> float | str | None:
         value = self._properties.get(self._semantics.get("stateProperty", ""))
+        if self._is_level:
+            return value if isinstance(value, str) and value else None
+        return value if isinstance(value, (int, float)) else None
+
+    @property
+    def _is_level(self) -> bool:
+        return self.device_class is SensorDeviceClass.ENUM
+
+
+class CameraUiReading(CameraUiSensorSetting, SensorEntity):
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(
+        self, manager: CameraUiSensorManager, sensor: dict[str, Any], reading: dict[str, Any]
+    ) -> None:
+        super().__init__(manager, sensor, reading["property"])
+        self._attr_device_class = sensor_device_class(reading.get("deviceClass"))
+        self._attr_native_unit_of_measurement = reading.get("unit")
+
+    @property
+    def name(self) -> str | None:
+        # HA names a reading after its device class, like MQTT discovery does
+        return self._device_class_name
+
+    @property
+    def available(self) -> bool:
+        readings = self._semantics.get("readings", [])
+        return super().available and any(reading["property"] == self._property for reading in readings)
+
+    @property
+    def native_value(self) -> float | None:
+        value = self._value
         return value if isinstance(value, (int, float)) else None
 
 

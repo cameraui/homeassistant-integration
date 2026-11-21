@@ -99,9 +99,5 @@ class CameraUiBinarySensor(CameraUiSensorEntity, BinarySensorEntity):
         return BinarySensorDeviceClass(device_class) if device_class else None
 
     @property
-    def icon(self) -> str | None:
-        return self._semantics.get("icon")
-
-    @property
     def is_on(self) -> bool:
         return bool(self._properties.get(self._semantics.get("stateProperty", "")))

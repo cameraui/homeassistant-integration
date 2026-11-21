@@ -14,6 +14,7 @@ from .const import (
     signal_sensor_assigned,
     signal_sensor_new,
     signal_sensor_remove,
+    signal_sensor_semantics,
     signal_sensor_update,
 )
 from .coordinator import CameraUiCoordinator
@@ -36,6 +37,10 @@ class CameraUiSensorManager:
         self._client.on_sensor(self._handle_push)
         self._client.on_connection(self._handle_connection)
         await self._reconcile(emit_new=False)
+
+    @property
+    def sensors(self) -> list[dict[str, Any]]:
+        return list(self._sensors.values())
 
     def sensors_for_platform(self, platform: Platform) -> list[dict[str, Any]]:
         return [sensor for sensor in self._sensors.values() if sensor_platform(sensor) is platform]
@@ -96,6 +101,7 @@ class CameraUiSensorManager:
             if not existed and emit_new:
                 async_dispatcher_send(self.hass, signal_sensor_new(self.entry_id), sensor)
             elif existed:
+                async_dispatcher_send(self.hass, signal_sensor_semantics(self.entry_id), sensor)
                 async_dispatcher_send(self.hass, signal_sensor_update(sensor_id))
 
         for sensor_id in [sensor_id for sensor_id in self._sensors if sensor_id not in current]:
@@ -118,6 +124,7 @@ class CameraUiSensorManager:
         existed = sensor_id in self._sensors
         self._sensors[sensor_id] = sensor
         if existed:
+            async_dispatcher_send(self.hass, signal_sensor_semantics(self.entry_id), sensor)
             async_dispatcher_send(self.hass, signal_sensor_update(sensor_id))
         else:
             async_dispatcher_send(self.hass, signal_sensor_new(self.entry_id), sensor)
@@ -157,10 +164,13 @@ class CameraUiSensorManager:
                 "connected",
                 "capabilities",
                 "propertySpecs",
+                "semantics",
                 "assignedCameraIds",
             ):
                 if key in message:
                     sensor[key] = message[key]
+            if "semantics" in message:
+                async_dispatcher_send(self.hass, signal_sensor_semantics(self.entry_id), sensor)
             if set(sensor.get("assignedCameraIds", [])) - previous_assigned:
                 async_dispatcher_send(self.hass, signal_sensor_assigned(self.entry_id), sensor)
         else:

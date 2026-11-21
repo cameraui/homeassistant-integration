@@ -16,9 +16,14 @@ DOMAIN_PLATFORM: dict[str, Platform] = {
     "lock": Platform.LOCK,
     "cover": Platform.COVER,
     "alarm": Platform.ALARM_CONTROL_PANEL,
+    "event": Platform.EVENT,
+    "text": Platform.TEXT,
 }
 
-SENSOR_PLATFORMS: list[Platform] = list(dict.fromkeys(DOMAIN_PLATFORM.values()))
+# settings of a sensor (volume, tone, preset) sit there next to its main entity
+SETTING_PLATFORMS = [Platform.NUMBER, Platform.SELECT]
+
+SENSOR_PLATFORMS: list[Platform] = list(dict.fromkeys([*DOMAIN_PLATFORM.values(), *SETTING_PLATFORMS]))
 
 
 def sensor_semantics(sensor: dict[str, Any]) -> dict[str, Any]:

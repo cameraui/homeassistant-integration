@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.const import Platform
@@ -19,6 +20,7 @@ from .const import (
     signal_sensor_assigned,
     signal_sensor_new,
     signal_sensor_remove,
+    signal_sensor_semantics,
     signal_sensor_update,
 )
 from .coordinator import CameraUiCoordinator
@@ -100,6 +102,10 @@ class CameraUiSensorEntity(Entity):
         if sensor.get("device") and not sensor.get("primary"):
             return sensor.get("shortName") or sensor.get("displayName") or None
         return None
+
+    @property
+    def icon(self) -> str | None:
+        return self._semantics.get("icon")
 
     @property
     def _semantics(self) -> dict[str, Any]:
@@ -201,6 +207,27 @@ class CameraUiSensorEntity(Entity):
         await self._manager.async_command(self._sensor_id, property_name, value)
 
 
+class CameraUiSensorSetting(CameraUiSensorEntity):
+    def __init__(self, manager: CameraUiSensorManager, sensor: dict[str, Any], property_name: str) -> None:
+        super().__init__(manager, sensor)
+        self._property = property_name
+        self._attr_unique_id = f"{self._sensor_id}_{property_name}"
+
+    @property
+    def name(self) -> str | None:
+        base = super().name
+        label = self._property.capitalize()
+        return f"{base} {label}" if base else label
+
+    @property
+    def icon(self) -> str | None:
+        return None
+
+    @property
+    def _value(self) -> Any:
+        return self._properties.get(self._property)
+
+
 def async_setup_sensor_platform(
     hass: HomeAssistant,
     entry: CameraUiConfigEntry,
@@ -219,6 +246,33 @@ def async_setup_sensor_platform(
         add_sensor(sensor)
 
     entry.async_on_unload(async_dispatcher_connect(hass, signal_sensor_new(entry.entry_id), add_sensor))
+
+
+def async_setup_sensor_settings(
+    hass: HomeAssistant,
+    entry: CameraUiConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+    factory: Callable[[CameraUiSensorManager, dict[str, Any]], Sequence[CameraUiSensorSetting]],
+) -> None:
+    manager = entry.runtime_data.sensor_manager
+    created: set[str] = set()
+
+    # a setting can show up after its sensor, when the plugin reports what the device has
+    @callback
+    def add_for(sensor: dict[str, Any]) -> None:
+        entities = [entity for entity in factory(manager, sensor) if entity.unique_id not in created]
+        for entity in entities:
+            unique_id = str(entity.unique_id)
+            created.add(unique_id)
+            entity.async_on_remove(partial(created.discard, unique_id))
+        if entities:
+            async_add_entities(entities)
+
+    for sensor in manager.sensors:
+        add_for(sensor)
+
+    entry.async_on_unload(async_dispatcher_connect(hass, signal_sensor_new(entry.entry_id), add_for))
+    entry.async_on_unload(async_dispatcher_connect(hass, signal_sensor_semantics(entry.entry_id), add_for))
 
 
 def async_setup_detection_entities(

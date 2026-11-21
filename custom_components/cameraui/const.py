@@ -37,6 +37,10 @@ def signal_sensor_assigned(entry_id: str) -> str:
     return f"{DOMAIN}_sensor_assigned_{entry_id}"
 
 
+def signal_sensor_semantics(entry_id: str) -> str:
+    return f"{DOMAIN}_sensor_semantics_{entry_id}"
+
+
 def signal_sensor_update(sensor_id: str) -> str:
     return f"{DOMAIN}_sensor_update_{sensor_id}"
 

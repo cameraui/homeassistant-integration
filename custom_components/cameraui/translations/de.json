@@ -70,6 +70,15 @@
       },
       "classification": {
         "name": "Klassifizierung"
+      },
+      "level": {
+        "state": {
+          "excellent": "Ausgezeichnet",
+          "good": "Gut",
+          "fair": "Mäßig",
+          "inferior": "Schlecht",
+          "poor": "Sehr schlecht"
+        }
       }
     }
   },
