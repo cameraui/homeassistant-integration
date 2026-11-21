@@ -3,6 +3,7 @@
 ## 0.5.4
 
 - **Sensors of one device show up as one device in Home Assistant.** A multi-sensor with contact, temperature and leak becomes one device with its manufacturer, model and firmware, and its entities are named after their part of the device. Entities keep their history. Needs camera.ui 2.5.2.
+- **Alarm panels offer only the modes the alarm system has.** A system without night mode, say, shows no night button. Needs camera.ui 2.5.2.
 
 ## 0.5.3
 
