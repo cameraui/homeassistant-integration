@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4
+
+- **Sensors of one device show up as one device in Home Assistant.** A multi-sensor with contact, temperature and leak becomes one device with its manufacturer, model and firmware, and its entities are named after their part of the device. Entities keep their history. Needs camera.ui 2.5.2.
+
 ## 0.5.3
 
 - **Cameras with `/`, `#`, `?` or `%` in their name work in Home Assistant.** The camera entity showed no picture and no live view. In the camera.ui panel and the dashboard cards they open with camera.ui 2.4.7.
