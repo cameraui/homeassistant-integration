@@ -14,6 +14,7 @@ from custom_components.cameraui.binary_sensor import CameraUiBinarySensor
 from custom_components.cameraui.const import DOMAIN
 from custom_components.cameraui.coordinator import CameraUiCoordinator
 from custom_components.cameraui.devices import async_get_device, async_remove_empty_sensor_devices
+from custom_components.cameraui.sensor import CameraUiMeasurement
 from custom_components.cameraui.sensor_manager import CameraUiSensorManager
 
 from .helpers import FakeEventsClient, make_entry
@@ -231,3 +232,41 @@ async def test_start_removes_a_sensor_device_its_entity_left(hass: HomeAssistant
     assert dr.async_get(hass).async_get(stale.id) is None
     assert dr.async_get(hass).async_get(camera.id)
     assert s.device("device_d-1")
+
+
+async def test_the_battery_of_a_device_is_a_diagnostic_entity_of_that_device(hass: HomeAssistant) -> None:
+    battery = sensor(
+        "s-battery",
+        "Hallway sensor Battery",
+        type="battery",
+        shortName="Battery",
+        device=HUB,
+        properties={"level": 64},
+        semantics={
+            "domain": "measurement",
+            "deviceClass": "battery",
+            "stateProperty": "level",
+            "unit": "%",
+            "diagnostic": True,
+        },
+    )
+    s = await setup(
+        hass, sensor("s-contact", "Hallway sensor", shortName="Contact", primary=True, device=HUB), battery
+    )
+    platform = MockEntityPlatform(hass, domain="sensor", platform_name=DOMAIN)
+    platform.config_entry = s.entry
+    await platform.async_add_entities(
+        [CameraUiMeasurement(s.manager, item) for item in s.manager.sensors_for_platform(Platform.SENSOR)]
+    )
+    await hass.async_block_till_done()
+
+    registry = er.async_get(hass)
+    entity_id = registry.async_get_entity_id("sensor", DOMAIN, "s-battery")
+    assert entity_id
+    entry = registry.async_get(entity_id)
+    assert entry and entry.entity_category == er.EntityCategory.DIAGNOSTIC
+    assert entry.device_id == s.entity_device("s-contact").id  # type: ignore[union-attr]
+    state = hass.states.get(entity_id)
+    assert state and state.state == "64"
+    assert (state.attributes["device_class"], state.attributes["unit_of_measurement"]) == ("battery", "%")
+    assert state.attributes["friendly_name"] == "Hallway sensor Battery"
