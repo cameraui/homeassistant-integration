@@ -8,7 +8,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import Entity
 from pytest_homeassistant_custom_component.common import MockEntityPlatform
 
-from custom_components.cameraui import event, number, select, sensor, siren, text
+from custom_components.cameraui import event, light, number, select, sensor, siren, switch, text
 from custom_components.cameraui.const import DOMAIN
 from custom_components.cameraui.coordinator import CameraUiCoordinator
 from custom_components.cameraui.sensor_manager import CameraUiSensorManager
@@ -22,6 +22,8 @@ PLATFORMS: dict[str, ModuleType] = {
     "number": number,
     "select": select,
     "siren": siren,
+    "light": light,
+    "switch": switch,
 }
 
 TONES = {
@@ -234,6 +236,67 @@ async def test_a_chime_rings_and_sets_its_volume_and_tone(hass: HomeAssistant) -
     await ha.entity("number", "c-1_volume").async_set_native_value(40)
     await ha.entity("select", "c-1_tone").async_select_option("Chirp")
     assert ha.client.commands == [("c-1", "active", True), ("c-1", "volume", 40), ("c-1", "tone", "r-2")]
+
+
+async def test_a_light_offers_the_colors_it_has_and_shows_its_mode(hass: HomeAssistant) -> None:
+    semantics = {
+        "domain": "light",
+        "stateProperty": "on",
+        "commandProperty": "on",
+        "color": {"temperature": "colorTemperature", "hueSaturation": "color", "mode": "colorMode"},
+    }
+    bulb = stored(
+        "l-1",
+        "light",
+        semantics,
+        properties={
+            "on": True,
+            "colorTemperature": 3000,
+            "color": {"hue": 120, "saturation": 80},
+            "colorMode": "temperature",
+        },
+        capabilities=["colorTemperature", "color"],
+        propertySpecs={
+            "colorTemperature": {"type": "number", "min": 2200, "max": 6500, "unit": "K", "writable": True}
+        },
+    )
+    white = stored(
+        "l-2",
+        "light",
+        {**semantics, "color": {"temperature": "colorTemperature"}},
+        properties={"on": False, "colorTemperature": 2700},
+    )
+    ha = await setup(hass, bulb, white)
+
+    state = ha.state("light", "l-1")
+    assert set(state.attributes["supported_color_modes"]) == {"color_temp", "hs"}
+    assert state.attributes["color_mode"] == "color_temp"
+    assert state.attributes["color_temp_kelvin"] == 3000
+    assert state.attributes["min_color_temp_kelvin"] == 2200
+    assert state.attributes["max_color_temp_kelvin"] == 6500
+    assert ha.state("light", "l-2").attributes["supported_color_modes"] == ["color_temp"]
+
+    await ha.changed("l-1", "colorMode", "color")
+    assert ha.state("light", "l-1").attributes["color_mode"] == "hs"
+    assert ha.state("light", "l-1").attributes["hs_color"] == (120, 80)
+
+    await ha.entity("light", "l-1").async_turn_on(color_temp_kelvin=4000)
+    await ha.entity("light", "l-1").async_turn_on(hs_color=(30, 50))
+    assert ha.client.commands == [
+        ("l-1", "colorTemperature", 4000),
+        ("l-1", "on", True),
+        ("l-1", "color", {"hue": 30, "saturation": 50}),
+        ("l-1", "on", True),
+    ]
+
+
+async def test_an_outlet_is_an_outlet_switch(hass: HomeAssistant) -> None:
+    semantics = {"domain": "switch", "stateProperty": "on", "commandProperty": "on", "deviceClass": "outlet"}
+    ha = await setup(hass, stored("o-1", "outlet", semantics, properties={"on": True}))
+
+    state = ha.state("switch", "o-1")
+    assert state.state == "on"
+    assert state.attributes["device_class"] == "outlet"
 
 
 async def test_a_display_takes_text_and_offers_presets_once_it_has_them(hass: HomeAssistant) -> None:

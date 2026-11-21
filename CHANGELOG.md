@@ -5,6 +5,7 @@
 - **Sensors of one device show up as one device in Home Assistant.** A multi-sensor with contact, temperature and leak becomes one device with its manufacturer, model and firmware, and its entities are named after their part of the device. Entities keep their history. Needs camera.ui 2.5.2.
 - **Alarm panels offer only the modes the alarm system has.** A system without night mode, say, shows no night button. Needs camera.ui 2.5.2.
 - **Buttons, access readers, chimes, displays and air quality.** Button presses and access attempts arrive as event entities, a display as a text entity with its presets as a select, a chime as a siren with its tone as a select. The volume of a siren or chime is a number entity, and each air quality reading a sensor of its own. Needs camera.ui 2.5.2.
+- **Lights with color temperature or color, and outlets.** A light offers the white tones and colors it has, an outlet shows as an outlet switch. Needs camera.ui 2.5.2.
 
 ## 0.5.3
 
