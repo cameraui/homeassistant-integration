@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
@@ -22,12 +22,14 @@ from .const import (
     signal_sensor_update,
 )
 from .coordinator import CameraUiCoordinator
-from .devices import async_get_device, async_set_via_device
+from .devices import async_get_device, async_remove_device_if_empty, async_set_via_device
 from .sensor_manager import CameraUiSensorManager
 from .sensor_map import sensor_platform
 
 if TYPE_CHECKING:
     from . import CameraUiConfigEntry
+
+DEVICE_FIELDS = ("name", "manufacturer", "model", "sw_version", "serial_number")
 
 
 class CameraUiEntity(CoordinatorEntity[CameraUiCoordinator]):
@@ -77,25 +79,11 @@ class CameraUiSensorEntity(Entity):
         self._attr_unique_id = self._sensor_id
 
         assigned = sensor.get("assignedCameraIds", [])
-        # camera hardware sits on the camera device; everything else is its own
-        # device, linked below the camera when there is exactly one
-        self._own_device = not (sensor.get("assignmentLocked") and len(assigned) == 1)
-        if self._own_device:
-            self._attr_device_info = DeviceInfo(
-                identifiers={(DOMAIN, f"sensor_{self._sensor_id}")},
-                name=sensor.get("displayName") or sensor.get("name"),
-                manufacturer="camera.ui",
-                model=sensor.get("pluginName"),
-            )
-            if len(assigned) == 1:
-                async_set_via_device(
-                    manager.hass, self._attr_device_info, (DOMAIN, assigned[0]), manager.entry_id
-                )
-        else:
-            self._attr_device_info = DeviceInfo(
-                identifiers={(DOMAIN, assigned[0])},
-                manufacturer="camera.ui",
-            )
+        # camera hardware sits on the camera device
+        self._camera_id: str | None = (
+            assigned[0] if sensor.get("assignmentLocked") and len(assigned) == 1 else None
+        )
+        self._attr_device_info = self._device_info(sensor)
 
     @property
     def _sensor(self) -> dict[str, Any] | None:
@@ -103,12 +91,15 @@ class CameraUiSensorEntity(Entity):
 
     @property
     def name(self) -> str | None:
-        # a single-entity device carries the name; live for camera-device
-        # sensors, so a rename in the UI lands on the existing entity
-        if self._own_device:
-            return None
+        # None takes the device name, live so a rename in the UI lands on the existing entity
         sensor = self._sensor
-        return (sensor.get("displayName") if sensor else None) or None
+        if not sensor:
+            return None
+        if self._camera_id:
+            return sensor.get("displayName") or None
+        if sensor.get("device") and not sensor.get("primary"):
+            return sensor.get("shortName") or sensor.get("displayName") or None
+        return None
 
     @property
     def _semantics(self) -> dict[str, Any]:
@@ -140,19 +131,58 @@ class CameraUiSensorEntity(Entity):
 
     @callback
     def _handle_update(self) -> None:
-        if self._own_device:
-            self._sync_device_name()
+        if not self._camera_id:
+            self._sync_device()
         self.async_write_ha_state()
 
+    def _device_info(self, sensor: dict[str, Any]) -> DeviceInfo:
+        if self._camera_id:
+            return DeviceInfo(identifiers={(DOMAIN, self._camera_id)}, manufacturer="camera.ui")
+        if device := sensor.get("device"):
+            return DeviceInfo(
+                identifiers={(DOMAIN, f"device_{device['id']}")},
+                name=device.get("name"),
+                manufacturer=device.get("manufacturer") or "camera.ui",
+                model=device.get("model") or sensor.get("pluginName"),
+                sw_version=device.get("firmware"),
+                serial_number=device.get("serialNumber"),
+            )
+        info = DeviceInfo(
+            identifiers={(DOMAIN, f"sensor_{self._sensor_id}")},
+            name=sensor.get("displayName") or sensor.get("name"),
+            manufacturer="camera.ui",
+            model=sensor.get("pluginName"),
+        )
+        # linked below the camera when there is exactly one
+        assigned = sensor.get("assignedCameraIds", [])
+        if len(assigned) == 1:
+            async_set_via_device(self._manager.hass, info, (DOMAIN, assigned[0]), self._manager.entry_id)
+        return info
+
     @callback
-    def _sync_device_name(self) -> None:
+    def _sync_device(self) -> None:
         sensor = self._sensor
-        if not sensor:
+        entry = self.registry_entry
+        if not sensor or not entry:
             return
-        device = async_get_device(self.hass, (DOMAIN, f"sensor_{self._sensor_id}"), self._manager.entry_id)
-        name = sensor.get("displayName") or sensor.get("name")
-        if device and name and device.name != name:
-            dr.async_get(self.hass).async_update_device(device.id, name=name)
+        info = self._device_info(sensor)
+        device = async_get_device(self.hass, next(iter(info["identifiers"])), self._manager.entry_id)
+        if device is None or device.id != entry.device_id:
+            self._move_to_device(info, entry.device_id)
+            return
+        fields = cast("dict[str, Any]", info)
+        changes = {
+            key: fields[key] for key in DEVICE_FIELDS if key in fields and getattr(device, key) != fields[key]
+        }
+        if changes:
+            dr.async_get(self.hass).async_update_device(device.id, **changes)
+
+    @callback
+    def _move_to_device(self, info: DeviceInfo, previous_device_id: str | None) -> None:
+        device = dr.async_get(self.hass).async_get_or_create(config_entry_id=self._manager.entry_id, **info)
+        er.async_get(self.hass).async_update_entity(self.entity_id, device_id=device.id)
+        if previous_device_id:
+            async_remove_device_if_empty(self.hass, previous_device_id)
 
     @callback
     def _handle_connection(self, connected: bool) -> None:

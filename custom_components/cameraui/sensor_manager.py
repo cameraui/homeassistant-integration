@@ -64,6 +64,9 @@ class CameraUiSensorManager:
     def has_sensor(self, sensor_id: str) -> bool:
         return sensor_id in self._sensors
 
+    def has_device(self, device_id: str) -> bool:
+        return any((sensor.get("device") or {}).get("id") == device_id for sensor in self._sensors.values())
+
     async def async_command(self, sensor_id: str, property_name: str, value: Any) -> None:
         await self._client.command_sensor(sensor_id, property_name, value)
 
@@ -96,14 +99,17 @@ class CameraUiSensorManager:
                 async_dispatcher_send(self.hass, signal_sensor_update(sensor_id))
 
         for sensor_id in [sensor_id for sensor_id in self._sensors if sensor_id not in current]:
-            self._sensors.pop(sensor_id, None)
-            self._remove_sensor(sensor_id)
+            self._remove_sensor(sensor_id, self._sensors.pop(sensor_id))
 
-    def _remove_sensor(self, sensor_id: str) -> None:
+    def _remove_sensor(self, sensor_id: str, sensor: dict[str, Any]) -> None:
         async_dispatcher_send(self.hass, signal_sensor_remove(sensor_id))
-        device = async_get_device(self.hass, (DOMAIN, f"sensor_{sensor_id}"), self.entry_id)
-        if device:
-            dr.async_get(self.hass).async_remove_device(device.id)
+        identifiers = [(DOMAIN, f"sensor_{sensor_id}")]
+        device_id = (sensor.get("device") or {}).get("id")
+        if device_id and not self.has_device(device_id):
+            identifiers.append((DOMAIN, f"device_{device_id}"))
+        for identifier in identifiers:
+            if device := async_get_device(self.hass, identifier, self.entry_id):
+                dr.async_get(self.hass).async_remove_device(device.id)
 
     async def _add_sensor(self, sensor_id: str) -> None:
         sensor = await self._client.get_sensor(sensor_id)
@@ -128,8 +134,8 @@ class CameraUiSensorManager:
             return
 
         if message_type == "removed":
-            if self._sensors.pop(sensor_id, None) is not None:
-                self._remove_sensor(sensor_id)
+            if (removed := self._sensors.pop(sensor_id, None)) is not None:
+                self._remove_sensor(sensor_id, removed)
             return
 
         sensor = self._sensors.get(sensor_id)
@@ -145,6 +151,9 @@ class CameraUiSensorManager:
             previous_assigned = set(sensor.get("assignedCameraIds", []))
             for key in (
                 "displayName",
+                "shortName",
+                "primary",
+                "device",
                 "connected",
                 "capabilities",
                 "assignedCameraIds",

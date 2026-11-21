@@ -24,6 +24,7 @@ from .const import (
     MIN_SERVER_VERSION,
 )
 from .coordinator import CameraUiCoordinator
+from .devices import async_remove_empty_sensor_devices
 from .panel import async_register_panel, async_register_panel_static, async_unregister_panel
 from .ptz import async_setup_ptz_service
 from .resources import async_register_cards_bundle, async_unregister_cards_bundle
@@ -109,6 +110,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: CameraUiConfigEntry) -> 
         entry.runtime_data = CameraUiRuntimeData(coordinator, sensor_manager, rpc, clips)
         entry.async_on_unload(entry.add_update_listener(_async_options_updated))
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        # a sensor that changed its device while HA was stopped leaves the old one empty
+        async_remove_empty_sensor_devices(hass, entry.entry_id)
     except BaseException:
         await client.disconnect_events()
         raise
@@ -168,6 +171,8 @@ async def async_remove_config_entry_device(
         if ident in cameras:
             return False
         if ident.startswith("sensor_") and sensors.has_sensor(ident.removeprefix("sensor_")):
+            return False
+        if ident.startswith("device_") and sensors.has_device(ident.removeprefix("device_")):
             return False
         if ident.startswith("server_"):
             return False
