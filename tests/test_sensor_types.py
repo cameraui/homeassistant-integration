@@ -8,10 +8,22 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import Entity
 from pytest_homeassistant_custom_component.common import MockEntityPlatform
 
-from custom_components.cameraui import event, light, number, select, sensor, siren, switch, text
+from custom_components.cameraui import (
+    climate,
+    cover,
+    event,
+    light,
+    number,
+    select,
+    sensor,
+    siren,
+    switch,
+    text,
+)
 from custom_components.cameraui.const import DOMAIN
 from custom_components.cameraui.coordinator import CameraUiCoordinator
 from custom_components.cameraui.sensor_manager import CameraUiSensorManager
+from custom_components.cameraui.sensor_map import DOMAIN_PLATFORM
 
 from .helpers import FakeEventsClient, make_entry
 
@@ -24,7 +36,24 @@ PLATFORMS: dict[str, ModuleType] = {
     "siren": siren,
     "light": light,
     "switch": switch,
+    "cover": cover,
+    "climate": climate,
 }
+
+# every SensorDomain of the SDK
+SENSOR_DOMAINS = [
+    "binary",
+    "measurement",
+    "switch",
+    "light",
+    "siren",
+    "lock",
+    "cover",
+    "climate",
+    "alarm",
+    "event",
+    "text",
+]
 
 TONES = {
     "type": "string",
@@ -326,3 +355,156 @@ async def test_a_display_takes_text_and_offers_presets_once_it_has_them(hass: Ho
         }
     )
     assert ha.state("select", "d-1_preset").attributes["options"] == ["Away"]
+
+
+def test_every_sensor_domain_has_a_platform() -> None:
+    assert sorted(DOMAIN_PLATFORM) == sorted(SENSOR_DOMAINS)
+
+
+COVER = {
+    "domain": "cover",
+    "stateProperty": "currentState",
+    "commandProperty": "targetState",
+    "deviceClass": "blind",
+    "states": {"open": 0, "closed": 1, "opening": 2, "closing": 3, "stopped": 4},
+}
+
+
+async def test_a_cover_moves_to_a_position_tilts_and_stops_when_it_can(hass: HomeAssistant) -> None:
+    blind = stored(
+        "c-1",
+        "cover",
+        {
+            **COVER,
+            "position": {"current": "currentPosition", "target": "targetPosition"},
+            "tilt": {"current": "currentTilt", "target": "targetTilt"},
+            "stop": {"property": "stop"},
+        },
+        properties={"currentState": 0, "currentPosition": 40, "currentTilt": 50},
+    )
+    door = stored("c-2", "cover", {**COVER, "deviceClass": "door"}, properties={"currentState": 1})
+    ha = await setup(hass, blind, door)
+
+    state = ha.state("cover", "c-1")
+    assert state.state == "open"
+    assert state.attributes["device_class"] == "blind"
+    assert state.attributes["current_position"] == 40
+    assert state.attributes["current_tilt_position"] == 50
+    # open, close, set position, stop and set tilt position
+    assert state.attributes["supported_features"] == 1 | 2 | 4 | 8 | 128
+
+    door_state = ha.state("cover", "c-2")
+    assert door_state.state == "closed"
+    assert door_state.attributes["supported_features"] == 1 | 2
+    assert "current_position" not in door_state.attributes
+
+    await ha.changed("c-1", "currentState", 3)
+    assert ha.state("cover", "c-1").state == "closing"
+
+    entity = ha.entity("cover", "c-1")
+    await entity.async_set_cover_position(position=70)
+    await entity.async_set_cover_tilt_position(tilt_position=20)
+    await entity.async_stop_cover()
+    await ha.entity("cover", "c-2").async_open_cover()
+    assert ha.client.commands == [
+        ("c-1", "targetPosition", 70),
+        ("c-1", "targetTilt", 20),
+        ("c-1", "stop", True),
+        ("c-2", "targetState", 0),
+    ]
+
+
+CLIMATE = {
+    "domain": "climate",
+    "stateProperty": "mode",
+    "commandProperty": "mode",
+    "states": {"off": "off", "heat": "heat", "cool": "cool", "heat_cool": "heat_cool"},
+    "climate": {"current": "currentTemperature", "target": "targetTemperature", "mode": "mode"},
+}
+
+
+async def test_a_thermostat_shows_its_modes_range_and_readings(hass: HomeAssistant) -> None:
+    full = stored(
+        "t-1",
+        "thermostat",
+        {
+            **CLIMATE,
+            "climate": {
+                **CLIMATE["climate"],
+                "targetLow": "targetTemperatureLow",
+                "targetHigh": "targetTemperatureHigh",
+                "action": "action",
+                "humidity": "currentHumidity",
+            },
+            "choices": ["preset"],
+        },
+        properties={
+            "mode": "heat",
+            "action": "heating",
+            "currentTemperature": 19.5,
+            "targetTemperature": 21,
+            "targetTemperatureLow": 18,
+            "targetTemperatureHigh": 24,
+            "currentHumidity": 45,
+            "preset": "eco",
+        },
+        propertySpecs={
+            "targetTemperature": {
+                "type": "number",
+                "min": 10,
+                "max": 30,
+                "step": 0.5,
+                "unit": "°C",
+                "writable": True,
+            },
+            "preset": {
+                "type": "string",
+                "writable": True,
+                "choices": [{"value": "eco", "label": "eco"}, {"value": "comfort", "label": "comfort"}],
+            },
+        },
+    )
+    simple = stored(
+        "t-2",
+        "thermostat",
+        {**CLIMATE, "states": {"heat": "heat"}},
+        properties={"mode": "heat", "currentTemperature": 20, "targetTemperature": 20},
+    )
+    ha = await setup(hass, full, simple)
+
+    state = ha.state("climate", "t-1")
+    assert state.state == "heat"
+    assert state.attributes["hvac_modes"] == ["off", "heat", "cool", "heat_cool"]
+    assert state.attributes["hvac_action"] == "heating"
+    assert state.attributes["current_temperature"] == 19.5
+    assert state.attributes["temperature"] == 21
+    assert state.attributes["min_temp"] == 10
+    assert state.attributes["max_temp"] == 30
+    assert state.attributes["target_temp_step"] == 0.5
+    assert state.attributes["current_humidity"] == 45
+    # target temperature, range, turn off and turn on
+    assert state.attributes["supported_features"] == 1 | 2 | 128 | 256
+    assert ha.state("select", "t-1_preset").state == "eco"
+
+    simple_state = ha.state("climate", "t-2")
+    assert simple_state.attributes["supported_features"] == 1 | 256
+    assert simple_state.attributes["min_temp"] == 7
+    assert "hvac_action" not in simple_state.attributes
+
+    await ha.changed("t-1", "mode", "heat_cool")
+    state = ha.state("climate", "t-1")
+    assert state.state == "heat_cool"
+    assert state.attributes["target_temp_low"] == 18
+    assert state.attributes["target_temp_high"] == 24
+
+    entity = ha.entity("climate", "t-1")
+    await entity.async_set_temperature(target_temp_low=17, target_temp_high=25)
+    await entity.async_set_temperature(temperature=22, hvac_mode="heat")
+    await entity.async_turn_off()
+    assert ha.client.commands == [
+        ("t-1", "targetTemperatureLow", 17),
+        ("t-1", "targetTemperatureHigh", 25),
+        ("t-1", "mode", "heat"),
+        ("t-1", "targetTemperature", 22),
+        ("t-1", "mode", "off"),
+    ]

@@ -15,6 +15,7 @@ DOMAIN_PLATFORM: dict[str, Platform] = {
     "siren": Platform.SIREN,
     "lock": Platform.LOCK,
     "cover": Platform.COVER,
+    "climate": Platform.CLIMATE,
     "alarm": Platform.ALARM_CONTROL_PANEL,
     "event": Platform.EVENT,
     "text": Platform.TEXT,
