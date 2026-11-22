@@ -22,8 +22,7 @@ class CameraUiText(CameraUiSensorEntity, TextEntity):
 
     @property
     def native_max(self) -> int:
-        specs = (self._sensor or {}).get("propertySpecs") or {}
-        max_length = specs.get(self._semantics.get("commandProperty", ""), {}).get("maxLength")
+        max_length = self._spec(self._semantics.get("commandProperty", "")).get("maxLength")
         return int(max_length) if max_length else super().native_max
 
     @property

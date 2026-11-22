@@ -83,8 +83,7 @@ class CameraUiLight(CameraUiSensorEntity, LightEntity):
 
     @property
     def _temperature_spec(self) -> dict[str, Any]:
-        specs = (self._sensor or {}).get("propertySpecs") or {}
-        return specs.get(self._color.get("temperature", "")) or {}
+        return self._spec(self._color.get("temperature", ""))
 
     @property
     def is_on(self) -> bool:

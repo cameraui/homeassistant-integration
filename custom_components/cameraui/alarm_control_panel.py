@@ -43,8 +43,7 @@ class CameraUiAlarmControlPanel(CameraUiSensorEntity, AlarmControlPanelEntity):
     @property
     def supported_features(self) -> AlarmControlPanelEntityFeature:
         states = self._semantics.get("states", {})
-        specs = (self._sensor or {}).get("propertySpecs", {})
-        offered = specs.get(self._semantics.get("commandProperty", ""), {}).get("values")
+        offered = self._spec(self._semantics.get("commandProperty", "")).get("values")
         features = AlarmControlPanelEntityFeature(0)
         for name, feature in ARM_FEATURES.items():
             if offered is None or states.get(name) in offered.values():

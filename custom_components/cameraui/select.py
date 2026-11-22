@@ -27,8 +27,7 @@ def choice_entities(manager: CameraUiSensorManager, sensor: dict[str, Any]) -> l
 class CameraUiChoice(CameraUiSensorSetting, SelectEntity):
     @property
     def _choices(self) -> list[dict[str, Any]]:
-        specs = (self._sensor or {}).get("propertySpecs") or {}
-        choices: list[dict[str, Any]] = specs.get(self._property, {}).get("choices", [])
+        choices: list[dict[str, Any]] = self._spec(self._property).get("choices", [])
         return choices
 
     @property

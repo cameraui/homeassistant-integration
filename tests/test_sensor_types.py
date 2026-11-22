@@ -12,13 +12,17 @@ from custom_components.cameraui import (
     climate,
     cover,
     event,
+    fan,
     light,
+    lock,
     number,
+    scene,
     select,
     sensor,
     siren,
     switch,
     text,
+    valve,
 )
 from custom_components.cameraui.const import DOMAIN
 from custom_components.cameraui.coordinator import CameraUiCoordinator
@@ -36,8 +40,12 @@ PLATFORMS: dict[str, ModuleType] = {
     "siren": siren,
     "light": light,
     "switch": switch,
+    "lock": lock,
     "cover": cover,
     "climate": climate,
+    "fan": fan,
+    "valve": valve,
+    "scene": scene,
 }
 
 # every SensorDomain of the SDK
@@ -50,6 +58,9 @@ SENSOR_DOMAINS = [
     "lock",
     "cover",
     "climate",
+    "fan",
+    "valve",
+    "scene",
     "alarm",
     "event",
     "text",
@@ -508,3 +519,178 @@ async def test_a_thermostat_shows_its_modes_range_and_readings(hass: HomeAssista
         ("t-1", "targetTemperature", 22),
         ("t-1", "mode", "off"),
     ]
+
+
+async def test_a_thermostat_sets_its_target_humidity(hass: HomeAssistant) -> None:
+    humidifier = stored(
+        "t-1",
+        "thermostat",
+        {**CLIMATE, "climate": {**CLIMATE["climate"], "targetHumidity": "targetHumidity"}},
+        properties={"mode": "heat", "currentTemperature": 20, "targetTemperature": 21, "targetHumidity": 45},
+        capabilities=["targetHumidity"],
+        propertySpecs={
+            "targetHumidity": {"type": "number", "min": 30, "max": 80, "unit": "%", "writable": True}
+        },
+    )
+    ha = await setup(hass, humidifier)
+
+    state = ha.state("climate", "t-1")
+    assert state.attributes["humidity"] == 45
+    assert state.attributes["min_humidity"] == 30
+    assert state.attributes["max_humidity"] == 80
+    # target temperature, target humidity, turn off and turn on
+    assert state.attributes["supported_features"] == 1 | 4 | 128 | 256
+
+    await ha.entity("climate", "t-1").async_set_humidity(50)
+    assert ha.client.commands == [("t-1", "targetHumidity", 50)]
+
+
+LOCK = {
+    "domain": "lock",
+    "stateProperty": "currentState",
+    "commandProperty": "targetState",
+    "states": {"locked": 0, "unlocked": 1, "jammed": 3},
+}
+
+
+async def test_a_lock_shows_when_it_is_jammed(hass: HomeAssistant) -> None:
+    ha = await setup(hass, stored("k-1", "lock", LOCK, properties={"currentState": 0}))
+    assert ha.state("lock", "k-1").state == "locked"
+
+    await ha.changed("k-1", "currentState", 3)
+    assert ha.state("lock", "k-1").state == "jammed"
+
+    await ha.changed("k-1", "currentState", 1)
+    assert ha.state("lock", "k-1").state == "unlocked"
+
+    await ha.entity("lock", "k-1").async_lock()
+    assert ha.client.commands == [("k-1", "targetState", 0)]
+
+
+FAN = {"domain": "fan", "stateProperty": "on", "commandProperty": "on"}
+
+
+async def test_a_fan_offers_speed_direction_and_swing_when_it_has_them(hass: HomeAssistant) -> None:
+    ceiling = stored(
+        "f-1",
+        "fan",
+        {
+            **FAN,
+            "fan": {"speed": "speed", "direction": "direction", "oscillating": "oscillating"},
+            "choices": ["preset"],
+        },
+        properties={
+            "on": True,
+            "speed": 50,
+            "direction": "forward",
+            "oscillating": False,
+            "preset": "breeze",
+        },
+        capabilities=["speed", "direction", "oscillation", "preset"],
+        propertySpecs={
+            "speed": {"type": "number", "min": 0, "max": 100, "step": 25, "unit": "%", "writable": True},
+            "preset": {
+                "type": "string",
+                "writable": True,
+                "choices": [{"value": "breeze", "label": "Breeze"}, {"value": "sleep", "label": "Sleep"}],
+            },
+        },
+    )
+    plain = stored("f-2", "fan", FAN, properties={"on": False})
+    ha = await setup(hass, ceiling, plain)
+
+    state = ha.state("fan", "f-1")
+    assert state.state == "on"
+    assert state.attributes["percentage"] == 50
+    assert state.attributes["percentage_step"] == 25
+    assert state.attributes["direction"] == "forward"
+    assert state.attributes["oscillating"] is False
+    # set speed, oscillate, direction, turn off and turn on
+    assert state.attributes["supported_features"] == 1 | 2 | 4 | 16 | 32
+    assert ha.state("select", "f-1_preset").state == "Breeze"
+
+    plain_state = ha.state("fan", "f-2")
+    assert plain_state.state == "off"
+    assert plain_state.attributes["supported_features"] == 16 | 32
+    assert "percentage" not in plain_state.attributes
+
+    entity = ha.entity("fan", "f-1")
+    await entity.async_set_percentage(75)
+    await entity.async_oscillate(True)
+    await entity.async_set_direction("reverse")
+    await ha.entity("select", "f-1_preset").async_select_option("Sleep")
+    await entity.async_set_percentage(0)
+    await ha.changed("f-1", "on", False)
+    await entity.async_set_percentage(25)
+    await ha.entity("fan", "f-2").async_turn_on()
+    assert ha.client.commands == [
+        ("f-1", "speed", 75),
+        ("f-1", "oscillating", True),
+        ("f-1", "direction", "reverse"),
+        ("f-1", "preset", "sleep"),
+        ("f-1", "on", False),
+        ("f-1", "speed", 25),
+        ("f-1", "on", True),
+        ("f-2", "on", True),
+    ]
+
+
+VALVE = {
+    "domain": "valve",
+    "stateProperty": "currentState",
+    "commandProperty": "targetState",
+    "states": {"open": 0, "closed": 1, "opening": 2, "closing": 3},
+}
+
+
+async def test_a_valve_opens_and_closes_or_moves_to_a_position(hass: HomeAssistant) -> None:
+    sprinkler = stored("v-1", "valve", {**VALVE, "deviceClass": "irrigation"}, properties={"currentState": 1})
+    gas = stored(
+        "v-2",
+        "valve",
+        {
+            **VALVE,
+            "deviceClass": "gas",
+            "position": {"current": "currentPosition", "target": "targetPosition"},
+        },
+        properties={"currentState": 0, "currentPosition": 40},
+        capabilities=["position"],
+    )
+    ha = await setup(hass, sprinkler, gas)
+
+    state = ha.state("valve", "v-1")
+    assert state.state == "closed"
+    assert state.attributes["device_class"] == "water"
+    assert state.attributes["supported_features"] == 1 | 2
+    assert "current_position" not in state.attributes
+
+    gas_state = ha.state("valve", "v-2")
+    assert gas_state.state == "open"
+    assert gas_state.attributes["device_class"] == "gas"
+    assert gas_state.attributes["current_position"] == 40
+    # open, close and set position
+    assert gas_state.attributes["supported_features"] == 1 | 2 | 4
+
+    await ha.changed("v-1", "currentState", 2)
+    assert ha.state("valve", "v-1").state == "opening"
+    await ha.changed("v-2", "currentPosition", 0)
+    assert ha.state("valve", "v-2").state == "closed"
+
+    await ha.entity("valve", "v-1").async_handle_close_valve()
+    await ha.entity("valve", "v-2").async_handle_open_valve()
+    await ha.entity("valve", "v-2").async_set_valve_position(30)
+    assert ha.client.commands == [
+        ("v-1", "targetState", 1),
+        ("v-2", "targetPosition", 100),
+        ("v-2", "targetPosition", 30),
+    ]
+
+
+async def test_a_scene_runs_when_activated(hass: HomeAssistant) -> None:
+    semantics = {"domain": "scene", "stateProperty": "active", "commandProperty": "active"}
+    ha = await setup(hass, stored("s-1", "scene", semantics, properties={"active": False}))
+
+    assert ha.state("scene", "s-1").state == "unknown"
+
+    await ha.entity("scene", "s-1").async_activate()
+    assert ha.client.commands == [("s-1", "active", True)]

@@ -37,20 +37,20 @@ class CameraUiClimate(CameraUiSensorEntity, ClimateEntity):
     def _climate(self) -> dict[str, str]:
         return self._semantics.get("climate") or {}
 
-    @property
-    def _target_spec(self) -> dict[str, Any]:
-        specs = (self._sensor or {}).get("propertySpecs") or {}
-        return specs.get(self._climate.get("target", "")) or {}
-
     def _read(self, key: str) -> Any:
         property_name = self._climate.get(key)
         return self._properties.get(property_name) if property_name else None
+
+    def _climate_spec(self, key: str) -> dict[str, Any]:
+        return self._spec(self._climate.get(key, ""))
 
     @property
     def supported_features(self) -> ClimateEntityFeature:
         features = ClimateEntityFeature.TARGET_TEMPERATURE
         if self._climate.get("targetLow") and self._climate.get("targetHigh"):
             features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+        if self._climate.get("targetHumidity"):
+            features |= ClimateEntityFeature.TARGET_HUMIDITY
         modes = self.hvac_modes
         if HVACMode.OFF in modes:
             features |= ClimateEntityFeature.TURN_OFF
@@ -90,19 +90,31 @@ class CameraUiClimate(CameraUiSensorEntity, ClimateEntity):
 
     @property
     def target_temperature_step(self) -> float | None:
-        return self._target_spec.get("step")
+        return self._climate_spec("target").get("step")
 
     @property
     def min_temp(self) -> float:
-        return float(self._target_spec.get("min", super().min_temp))
+        return float(self._climate_spec("target").get("min", super().min_temp))
 
     @property
     def max_temp(self) -> float:
-        return float(self._target_spec.get("max", super().max_temp))
+        return float(self._climate_spec("target").get("max", super().max_temp))
 
     @property
     def current_humidity(self) -> float | None:
         return self._read("humidity")
+
+    @property
+    def target_humidity(self) -> float | None:
+        return self._read("targetHumidity")
+
+    @property
+    def min_humidity(self) -> float:
+        return float(self._climate_spec("targetHumidity").get("min", super().min_humidity))
+
+    @property
+    def max_humidity(self) -> float:
+        return float(self._climate_spec("targetHumidity").get("max", super().max_humidity))
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         await self.async_command(self._climate["mode"], str(hvac_mode))
@@ -115,3 +127,6 @@ class CameraUiClimate(CameraUiSensorEntity, ClimateEntity):
         for attribute, key in ((ATTR_TARGET_TEMP_LOW, "targetLow"), (ATTR_TARGET_TEMP_HIGH, "targetHigh")):
             if attribute in kwargs and (property_name := self._climate.get(key)):
                 await self.async_command(property_name, kwargs[attribute])
+
+    async def async_set_humidity(self, humidity: int) -> None:
+        await self.async_command(self._climate["targetHumidity"], humidity)

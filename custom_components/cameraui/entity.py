@@ -118,6 +118,10 @@ class CameraUiSensorEntity(Entity):
         return sensor.get("properties", {}) if sensor else {}
 
     @property
+    def _state(self) -> Any:
+        return self._properties.get(self._semantics.get("stateProperty", ""))
+
+    @property
     def available(self) -> bool:
         sensor = self._sensor
         return self._connected and sensor is not None and sensor.get("connected", True)
@@ -203,8 +207,30 @@ class CameraUiSensorEntity(Entity):
         else:
             await self.async_remove(force_remove=True)
 
+    def _is(self, name: str) -> bool:
+        expected = self._semantics.get("states", {}).get(name)
+        return expected is not None and self._state == expected
+
+    def _spec(self, property_name: str) -> dict[str, Any]:
+        specs = (self._sensor or {}).get("propertySpecs") or {}
+        return specs.get(property_name) or {}
+
     async def async_command(self, property_name: str, value: Any) -> None:
         await self._manager.async_command(self._sensor_id, property_name, value)
+
+
+class CameraUiOpenCloseEntity(CameraUiSensorEntity):
+    @property
+    def is_closed(self) -> bool | None:
+        return None if self._state is None else self._is("closed")
+
+    @property
+    def is_opening(self) -> bool:
+        return self._is("opening")
+
+    @property
+    def is_closing(self) -> bool:
+        return self._is("closing")
 
 
 class CameraUiSensorSetting(CameraUiSensorEntity):

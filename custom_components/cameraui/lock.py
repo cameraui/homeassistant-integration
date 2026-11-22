@@ -23,11 +23,11 @@ class CameraUiLock(CameraUiSensorEntity, LockEntity):
     @property
     def is_locked(self) -> bool | None:
         # reads currentState but commands targetState, hence the two properties
-        current = self._properties.get(self._semantics.get("stateProperty", ""))
-        locked = self._semantics.get("states", {}).get("locked")
-        if current is None or locked is None:
-            return None
-        return current == locked
+        return None if self._state is None else self._is("locked")
+
+    @property
+    def is_jammed(self) -> bool:
+        return self._is("jammed")
 
     async def async_lock(self, **kwargs: Any) -> None:
         await self.async_command(self._semantics["commandProperty"], self._semantics["states"]["locked"])
