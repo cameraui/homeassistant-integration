@@ -46,7 +46,7 @@ class CameraUiMediaPlayer(CameraUiCommandEntity, MediaPlayerEntity):
         if self._parts.get("power"):
             features |= MediaPlayerEntityFeature.TURN_ON | MediaPlayerEntityFeature.TURN_OFF
         if self._parts.get("volume"):
-            features |= MediaPlayerEntityFeature.VOLUME_SET
+            features |= MediaPlayerEntityFeature.VOLUME_SET | MediaPlayerEntityFeature.VOLUME_STEP
         if self._parts.get("muted"):
             features |= MediaPlayerEntityFeature.VOLUME_MUTE
         if self._parts.get("source"):

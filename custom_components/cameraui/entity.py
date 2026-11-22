@@ -6,7 +6,7 @@ from enum import IntFlag
 from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
-from homeassistant.const import Platform
+from homeassistant.const import EntityCategory, Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
@@ -279,6 +279,10 @@ class CameraUiSensorSetting(CameraUiSensorEntity):
     @property
     def icon(self) -> str | None:
         return None
+
+    @property
+    def entity_category(self) -> EntityCategory | None:
+        return EntityCategory.CONFIG if self._property in self._semantics.get("configuration", []) else None
 
     @property
     def _value(self) -> Any:

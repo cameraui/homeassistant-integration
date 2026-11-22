@@ -16,15 +16,13 @@ EVENTS_SHUTDOWN_TIMEOUT = 5
 
 
 class CameraUiApiError(Exception):
-    """Raised when the camera.ui API returns an error."""
-
     def __init__(self, message: str, status: int | None = None) -> None:
         super().__init__(message)
         self.status = status
 
 
 class CameraUiAuthError(CameraUiApiError):
-    """Raised when authentication fails."""
+    pass
 
 
 class CameraUiClient:

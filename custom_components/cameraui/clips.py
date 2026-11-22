@@ -34,8 +34,6 @@ READ_CHUNK = 1024 * 1024
 
 
 class ClipDownload:
-    """One running export: viewers read what already landed in the file, so late ones can join."""
-
     def __init__(self, tmp: Path) -> None:
         self.tmp = tmp
         self.written = 0
@@ -59,10 +57,11 @@ class ClipDownload:
         self._wake()
 
     async def file(self) -> Path:
-        """The complete clip file. A waiter that gives up leaves the export running for the others."""
+        # a waiter that gives up leaves the export running for the others
         return await asyncio.shield(self.done)
 
     async def stream(self) -> AsyncGenerator[bytes]:
+        # reads what already landed in the file, so a late viewer joins the running export
         loop = asyncio.get_running_loop()
         fd = await self._open()
         try:
@@ -100,8 +99,6 @@ class ClipDownload:
 
 
 class ClipCache:
-    """Event clips exported by the NVR, kept on the HA host so the player can seek."""
-
     def __init__(
         self, hass: HomeAssistant, entry_id: str, rpc: CameraUiRpc, base_url: str, quality: str
     ) -> None:
@@ -109,6 +106,7 @@ class ClipCache:
         self._rpc = rpc
         self._base_url = base_url
         self._quality = quality
+        # kept on the HA host so the player can seek
         self._dir = Path(hass.config.path(".cache", "cameraui", "clips", entry_id))
         self._downloads: dict[str, ClipDownload] = {}
 
@@ -116,14 +114,12 @@ class ClipCache:
         await self._hass.async_add_executor_job(self._wipe)
 
     async def cached(self, event_id: str) -> Path | ClipDownload | None:
-        """The cached file or the export in progress, without asking the NVR."""
         path = self._dir / f"{event_id}.mp4"
         if await self._hass.async_add_executor_job(self._fresh, path):
             return path
         return self._downloads.get(event_id)
 
     async def open(self, camera_id: str, event_id: str, start_ms: int, end_ms: int) -> Path | ClipDownload:
-        """The cached file, or the export in progress to stream from while it lands on disk."""
         ready = await self.cached(event_id)
         if ready is not None:
             return ready

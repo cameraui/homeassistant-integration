@@ -4,6 +4,7 @@ from types import ModuleType, SimpleNamespace
 from typing import Any
 
 import pytest
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
@@ -11,6 +12,7 @@ from homeassistant.helpers.entity import Entity
 from pytest_homeassistant_custom_component.common import MockEntityPlatform
 
 from custom_components.cameraui import (
+    binary_sensor,
     climate,
     cover,
     event,
@@ -39,6 +41,7 @@ from custom_components.cameraui.sensor_map import DOMAIN_PLATFORM
 from .helpers import FakeEventsClient, make_entry
 
 PLATFORMS: dict[str, ModuleType] = {
+    "binary_sensor": binary_sensor,
     "sensor": sensor,
     "event": event,
     "text": text,
@@ -129,6 +132,11 @@ class Setup:
 
     def has(self, domain: str, unique_id: str) -> bool:
         return er.async_get(self.hass).async_get_entity_id(domain, DOMAIN, unique_id) is not None
+
+    def category(self, domain: str, unique_id: str) -> EntityCategory | None:
+        entry = er.async_get(self.hass).async_get(self.entity_id(domain, unique_id))
+        assert entry
+        return entry.entity_category
 
     async def push(self, message: dict[str, Any]) -> None:
         self.client.sensor(message)
@@ -272,6 +280,7 @@ async def test_a_chime_rings_and_sets_its_volume_and_tone(hass: HomeAssistant) -
         "tone": {"property": "tone"},
         "volume": {"property": "volume", "scale": 100},
         "choices": ["tone"],
+        "configuration": ["tone", "volume"],
     }
     chime = stored(
         "c-1",
@@ -289,6 +298,9 @@ async def test_a_chime_rings_and_sets_its_volume_and_tone(hass: HomeAssistant) -
     assert tone.state == "Ding Dong"
     assert tone.attributes["options"] == ["Ding Dong", "Chirp"]
     assert tone.attributes["friendly_name"] == "Front Tone"
+    assert ha.category("number", "c-1_volume") is EntityCategory.CONFIG
+    assert ha.category("select", "c-1_tone") is EntityCategory.CONFIG
+    assert ha.category("siren", "c-1") is None
 
     await ha.entity("siren", "c-1").async_turn_on()
     await ha.entity("number", "c-1_volume").async_set_native_value(40)
@@ -380,10 +392,12 @@ async def test_a_display_takes_text_and_offers_presets_once_it_has_them(hass: Ho
             "type": "meta",
             "sensorId": "d-1",
             "capabilities": ["presets"],
-            "semantics": {**semantics, "choices": ["preset"]},
+            "semantics": {**semantics, "choices": ["preset"], "configuration": ["preset"]},
         }
     )
     assert ha.state("select", "d-1_preset").attributes["options"] == ["Away"]
+    assert ha.category("select", "d-1_preset") is EntityCategory.CONFIG
+    assert ha.category("text", "d-1") is None
 
 
 def test_every_sensor_domain_has_a_platform() -> None:
@@ -571,15 +585,27 @@ LOCK = {
 }
 
 
-async def test_a_lock_shows_when_it_is_jammed(hass: HomeAssistant) -> None:
-    ha = await setup(hass, stored("k-1", "lock", LOCK, properties={"currentState": 0}))
+async def test_a_lock_shows_when_it_is_moving_jammed_or_unknown(hass: HomeAssistant) -> None:
+    ha = await setup(hass, stored("k-1", "lock", LOCK, properties={"currentState": 0, "targetState": 0}))
     assert ha.state("lock", "k-1").state == "locked"
 
     await ha.changed("k-1", "currentState", 3)
     assert ha.state("lock", "k-1").state == "jammed"
 
+    await ha.changed("k-1", "currentState", 2)
+    assert ha.state("lock", "k-1").state == "unknown"
+
     await ha.changed("k-1", "currentState", 1)
+    assert ha.state("lock", "k-1").state == "locking"
+
+    await ha.changed("k-1", "targetState", 1)
     assert ha.state("lock", "k-1").state == "unlocked"
+
+    await ha.changed("k-1", "currentState", 0)
+    assert ha.state("lock", "k-1").state == "unlocking"
+
+    await ha.changed("k-1", "currentState", None)
+    assert ha.state("lock", "k-1").state == "unknown"
 
     await ha.entity("lock", "k-1").async_lock()
     assert ha.client.commands == [("k-1", "targetState", 0)]
@@ -818,7 +844,9 @@ async def test_an_air_purifier_is_a_fan_with_its_presets_toggles_and_filter(hass
             "fan": {"speed": "speed"},
             "choices": ["preset"],
             "toggles": ["auto", "childLock"],
+            "configuration": ["childLock"],
             "readings": [{"property": "filterLife", "unit": "%"}],
+            "indicators": [{"property": "filterChange", "deviceClass": "problem"}],
         },
         properties={
             "on": True,
@@ -827,6 +855,7 @@ async def test_an_air_purifier_is_a_fan_with_its_presets_toggles_and_filter(hass
             "childLock": True,
             "preset": "sleep",
             "filterLife": 35,
+            "filterChange": False,
         },
         capabilities=["speed", "auto", "preset", "childLock", "filter"],
         propertySpecs={
@@ -854,16 +883,35 @@ async def test_an_air_purifier_is_a_fan_with_its_presets_toggles_and_filter(hass
     assert filter_life.attributes["unit_of_measurement"] == "%"
     assert filter_life.attributes["friendly_name"] == "Front Filter life"
 
+    filter_change = ha.state("binary_sensor", "p-1_filterChange")
+    assert filter_change.state == "off"
+    assert filter_change.attributes["device_class"] == "problem"
+    assert filter_change.attributes["friendly_name"] == "Front Filter change"
+
     assert ha.state("switch", "p-1_auto").state == "off"
     child_lock = ha.state("switch", "p-1_childLock")
     assert child_lock.state == "on"
     assert child_lock.attributes["friendly_name"] == "Front Child lock"
+    assert ha.category("switch", "p-1_childLock") is EntityCategory.CONFIG
+    for domain, unique_id in (
+        ("fan", "p-1"),
+        ("switch", "p-1_auto"),
+        ("select", "p-1_preset"),
+        ("sensor", "p-1_filterLife"),
+        ("binary_sensor", "p-1_filterChange"),
+    ):
+        assert ha.category(domain, unique_id) is None
 
     hallway_state = ha.state("fan", "p-2")
     assert hallway_state.state == "off"
     assert hallway_state.attributes["supported_features"] == 16 | 32
     assert "percentage" not in hallway_state.attributes
-    for domain, unique_id in (("switch", "p-2_auto"), ("select", "p-2_preset"), ("sensor", "p-2_filterLife")):
+    for domain, unique_id in (
+        ("switch", "p-2_auto"),
+        ("select", "p-2_preset"),
+        ("sensor", "p-2_filterLife"),
+        ("binary_sensor", "p-2_filterChange"),
+    ):
         assert not ha.has(domain, unique_id)
 
     await ha.entity("fan", "p-1").async_set_percentage(40)
@@ -881,6 +929,8 @@ async def test_an_air_purifier_is_a_fan_with_its_presets_toggles_and_filter(hass
 
     await ha.changed("p-1", "childLock", False)
     assert ha.state("switch", "p-1_childLock").state == "off"
+    await ha.changed("p-1", "filterChange", True)
+    assert ha.state("binary_sensor", "p-1_filterChange").state == "on"
 
 
 WATER_HEATER = {
@@ -987,6 +1037,7 @@ async def test_a_toggle_is_a_switch_while_the_sensor_offers_it(hass: HomeAssista
     away = ha.state("switch", "w-1_away")
     assert away.state == "off"
     assert away.attributes["friendly_name"] == "Front Away"
+    assert ha.category("switch", "w-1_away") is None
 
     await ha.entity("switch", "w-1_away").async_turn_on()
     await ha.changed("w-1", "away", True)
@@ -1176,16 +1227,18 @@ async def test_a_media_player_offers_the_controls_and_commands_it_has(hass: Home
     assert state.attributes["source_list"] == ["HDMI 1", "Netflix"]
     assert state.attributes["media_title"] == "So What"
     assert state.attributes["media_artist"] == "Miles Davis"
-    # play, pause, stop, next, previous, turn on, turn off, volume set, mute and select source
-    assert state.attributes["supported_features"] == 16384 | 1 | 4096 | 32 | 16 | 128 | 256 | 4 | 8 | 2048
+    # play, pause, stop, next, previous, turn on, turn off, volume set and step, mute and select source
+    assert (
+        state.attributes["supported_features"] == 16384 | 1 | 4096 | 32 | 16 | 128 | 256 | 4 | 1024 | 8 | 2048
+    )
     assert not ha.has("select", "p-1_source")
     assert not ha.has("number", "p-1_volume")
 
     speaker_state = ha.state("media_player", "p-2")
     assert speaker_state.state == "idle"
     assert speaker_state.attributes["volume_level"] == 0.25
-    # play, pause and volume set
-    assert speaker_state.attributes["supported_features"] == 16384 | 1 | 4
+    # play, pause and volume set and step
+    assert speaker_state.attributes["supported_features"] == 16384 | 1 | 4 | 1024
     for attribute in ("device_class", "is_volume_muted", "source", "source_list", "media_title"):
         assert attribute not in speaker_state.attributes
 
@@ -1215,6 +1268,7 @@ async def test_a_media_player_offers_the_controls_and_commands_it_has(hass: Home
     await entity.async_media_next_track()
     await entity.async_media_previous_track()
     await ha.entity("media_player", "p-2").async_volume_up()
+    await ha.entity("media_player", "p-2").async_volume_down()
     await ha.entity("media_player", "p-2").async_media_pause()
     assert ha.client.commands == [
         ("p-1", "on", True),
@@ -1228,6 +1282,7 @@ async def test_a_media_player_offers_the_controls_and_commands_it_has(hass: Home
         ("p-1", "command", "next"),
         ("p-1", "command", "previous"),
         ("p-2", "volume", 35),
+        ("p-2", "volume", 15),
         ("p-2", "command", "pause"),
     ]
 

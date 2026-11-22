@@ -41,5 +41,4 @@ def sensor_semantics(sensor: dict[str, Any]) -> dict[str, Any]:
 
 
 def sensor_platform(sensor: dict[str, Any]) -> Platform | None:
-    """The HA platform a sensor belongs on, or None if it is not exposable."""
     return DOMAIN_PLATFORM.get(sensor_semantics(sensor).get("domain", ""))

@@ -23,7 +23,18 @@ class CameraUiLock(CameraUiSensorEntity, LockEntity):
     @property
     def is_locked(self) -> bool | None:
         # reads currentState but commands targetState, hence the two properties
-        return None if self._state is None else self._is("locked")
+        if self._is("locked"):
+            return True
+        return False if self._is("unlocked") else None
+
+    @property
+    def is_locking(self) -> bool:
+        # a target other than the state means it is on its way there, as in HomeKit
+        return self._is("unlocked") and self._targets("locked")
+
+    @property
+    def is_unlocking(self) -> bool:
+        return self._is("locked") and self._targets("unlocked")
 
     @property
     def is_jammed(self) -> bool:
@@ -34,3 +45,7 @@ class CameraUiLock(CameraUiSensorEntity, LockEntity):
 
     async def async_unlock(self, **kwargs: Any) -> None:
         await self.async_command(self._semantics["commandProperty"], self._semantics["states"]["unlocked"])
+
+    def _targets(self, name: str) -> bool:
+        expected = self._semantics.get("states", {}).get(name)
+        return expected is not None and self._properties.get(self._semantics["commandProperty"]) == expected

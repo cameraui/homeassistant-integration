@@ -4,15 +4,15 @@
 
 - **Sensors of one device show up as one device in Home Assistant.** A multi-sensor with contact, temperature and leak becomes one device with its manufacturer, model and firmware, and its entities are named after their part of the device. Entities keep their history. Needs camera.ui 2.5.2.
 - **Alarm panels offer only the modes the alarm system has.** A system without night mode, say, shows no night button. Needs camera.ui 2.5.2.
-- **Buttons, access readers, chimes, displays and air quality.** Button presses and access attempts arrive as event entities, a display as a text entity with its presets as a select, a chime as a siren with its tone as a select. The volume of a siren or chime is a number entity, and each air quality reading a sensor of its own. Needs camera.ui 2.5.2.
+- **Buttons, access readers, chimes, displays and air quality.** Button presses and access attempts arrive as event entities, a display as a text entity with its presets as a select, a chime as a siren with its tone as a select. The volume of a siren or chime is a number entity, and each air quality reading a sensor of its own. Volume, tone and display presets sit under Configuration on the device page. Needs camera.ui 2.5.2.
 - **Lights with color temperature or color, and outlets.** A light offers the white tones and colors it has, an outlet shows as an outlet switch. Needs camera.ui 2.5.2.
 - **Covers and thermostats.** A blind, shutter or other cover opens, closes and stops, and moves to a position or tilts when it can. A thermostat is a climate entity with its modes, target temperature or range, target humidity, current temperature and humidity, its presets and fan modes are selects. Needs camera.ui 2.5.2.
 - **Fans, valves and scenes.** A fan sets its speed, direction and oscillation when it can, its presets are a select. A valve opens and closes or moves to a position, and a scene runs from Home Assistant. Needs camera.ui 2.5.2.
 - **Humidifiers and dehumidifiers.** A humidifier or dehumidifier sets its target humidity and mode, and shows the humidity it measures and whether it is working when it reports them. Needs camera.ui 2.5.2.
-- **Air purifiers and water heaters.** An air purifier is a fan that sets its speed when it can, its presets are a select, its automatic mode and child lock are switches and its filter life a sensor. A water heater sets its target temperature and mode, its away mode is a switch. Needs camera.ui 2.5.2.
+- **Air purifiers and water heaters.** An air purifier is a fan that sets its speed when it can, its presets are a select, its automatic mode and child lock are switches, the child lock under Configuration. Its filter life is a sensor, a filter that needs a change shows as a problem. A water heater sets its target temperature and mode, its away mode is a switch. Needs camera.ui 2.5.2.
 - **Robot vacuums and lawn mowers.** A vacuum starts, pauses, stops, cleans a spot, returns to its dock, beeps so you can find it and sets its fan speed. A lawn mower starts, pauses and returns to its dock. Each offers only the commands the device has. Needs camera.ui 2.5.2.
-- **Media players.** A TV, speaker, receiver or projector turns on and off, plays, pauses, stops and skips, sets its volume, mutes and switches its input, and shows the title and artist of what plays. It offers only what the device has. Needs camera.ui 2.5.2.
-- **A jammed lock shows as jammed.** Needs camera.ui 2.5.2.
+- **Media players.** A TV, speaker, receiver or projector turns on and off, plays, pauses, stops and skips, sets its volume or turns it up and down, mutes and switches its input, and shows the title and artist of what plays. It offers only what the device has. Needs camera.ui 2.5.2.
+- **A lock shows when it is locking, unlocking or jammed.** A lock that can't tell its state shows as unknown instead of unlocked. Jammed needs camera.ui 2.5.2.
 
 ## 0.5.3
 

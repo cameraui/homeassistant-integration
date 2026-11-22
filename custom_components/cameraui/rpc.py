@@ -26,12 +26,10 @@ EVENT_LIMIT = 600
 
 
 class CameraUiRpcError(Exception):
-    """Raised when an RPC call to camera.ui fails."""
+    pass
 
 
 class CameraUiRpc:
-    """One lazy NATS-over-WebSocket connection per config entry, closed again when idle."""
-
     def __init__(self, host: str, port: int, token: str) -> None:
         self._host = host
         self._port = port
