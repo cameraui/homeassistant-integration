@@ -3,7 +3,9 @@ from __future__ import annotations
 from types import ModuleType, SimpleNamespace
 from typing import Any
 
+import pytest
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import Entity
 from pytest_homeassistant_custom_component.common import MockEntityPlatform
@@ -13,6 +15,7 @@ from custom_components.cameraui import (
     cover,
     event,
     fan,
+    humidifier,
     light,
     lock,
     number,
@@ -46,6 +49,7 @@ PLATFORMS: dict[str, ModuleType] = {
     "fan": fan,
     "valve": valve,
     "scene": scene,
+    "humidifier": humidifier,
 }
 
 # every SensorDomain of the SDK
@@ -61,6 +65,7 @@ SENSOR_DOMAINS = [
     "fan",
     "valve",
     "scene",
+    "humidifier",
     "alarm",
     "event",
     "text",
@@ -694,3 +699,95 @@ async def test_a_scene_runs_when_activated(hass: HomeAssistant) -> None:
 
     await ha.entity("scene", "s-1").async_activate()
     assert ha.client.commands == [("s-1", "active", True)]
+
+
+HUMIDIFIER = {"domain": "humidifier", "stateProperty": "on", "commandProperty": "on"}
+
+
+async def test_a_humidifier_offers_its_range_modes_and_readings(hass: HomeAssistant) -> None:
+    bedroom = stored(
+        "h-1",
+        "humidifier",
+        {
+            **HUMIDIFIER,
+            "deviceClass": "humidifier",
+            "humidifier": {
+                "target": "targetHumidity",
+                "current": "currentHumidity",
+                "action": "action",
+                "mode": "mode",
+            },
+        },
+        properties={
+            "on": True,
+            "targetHumidity": 45,
+            "currentHumidity": 38,
+            "action": "humidifying",
+            "mode": "m-1",
+        },
+        capabilities=["humidity", "action", "mode"],
+        propertySpecs={
+            "targetHumidity": {
+                "type": "number",
+                "min": 30,
+                "max": 80,
+                "step": 5,
+                "unit": "%",
+                "writable": True,
+            },
+            "mode": {
+                "type": "string",
+                "writable": True,
+                "choices": [{"value": "m-1", "label": "Eco"}, {"value": "m-2", "label": "Sleep"}],
+            },
+        },
+    )
+    basement = stored(
+        "h-2",
+        "humidifier",
+        {**HUMIDIFIER, "deviceClass": "dehumidifier", "humidifier": {"target": "targetHumidity"}},
+        properties={"on": False, "targetHumidity": 50},
+    )
+    ha = await setup(hass, bedroom, basement)
+
+    state = ha.state("humidifier", "h-1")
+    assert state.state == "on"
+    assert state.attributes["device_class"] == "humidifier"
+    assert state.attributes["humidity"] == 45
+    assert state.attributes["current_humidity"] == 38
+    assert state.attributes["action"] == "humidifying"
+    assert state.attributes["min_humidity"] == 30
+    assert state.attributes["max_humidity"] == 80
+    assert state.attributes["target_humidity_step"] == 5
+    assert state.attributes["available_modes"] == ["Eco", "Sleep"]
+    assert state.attributes["mode"] == "Eco"
+    # modes
+    assert state.attributes["supported_features"] == 1
+    assert not ha.has("select", "h-1_mode")
+
+    basement_state = ha.state("humidifier", "h-2")
+    assert basement_state.state == "off"
+    assert basement_state.attributes["device_class"] == "dehumidifier"
+    assert basement_state.attributes["supported_features"] == 0
+    assert basement_state.attributes["min_humidity"] == 0
+    assert basement_state.attributes["max_humidity"] == 100
+    for attribute in ("available_modes", "mode", "action", "current_humidity", "target_humidity_step"):
+        assert attribute not in basement_state.attributes
+
+    await ha.changed("h-1", "on", False)
+    assert ha.state("humidifier", "h-1").attributes["action"] == "off"
+
+    entity = ha.entity("humidifier", "h-1")
+    await entity.async_set_humidity(50)
+    await entity.async_set_mode("Sleep")
+    await entity.async_turn_off()
+    await ha.entity("humidifier", "h-2").async_turn_on()
+    assert ha.client.commands == [
+        ("h-1", "targetHumidity", 50),
+        ("h-1", "mode", "m-2"),
+        ("h-1", "on", False),
+        ("h-2", "on", True),
+    ]
+
+    with pytest.raises(ServiceValidationError):
+        await entity.async_set_mode("Turbo")

@@ -8,6 +8,7 @@
 - **Lights with color temperature or color, and outlets.** A light offers the white tones and colors it has, an outlet shows as an outlet switch. Needs camera.ui 2.5.2.
 - **Covers and thermostats.** A blind, shutter or other cover opens, closes and stops, and moves to a position or tilts when it can. A thermostat is a climate entity with its modes, target temperature or range, target humidity, current temperature and humidity, its presets and fan modes are selects. Needs camera.ui 2.5.2.
 - **Fans, valves and scenes.** A fan sets its speed, direction and oscillation when it can, its presets are a select. A valve opens and closes or moves to a position, and a scene runs from Home Assistant. Needs camera.ui 2.5.2.
+- **Humidifiers and dehumidifiers.** A humidifier or dehumidifier sets its target humidity and mode, and shows the humidity it measures and whether it is working when it reports them. Needs camera.ui 2.5.2.
 - **A jammed lock shows as jammed.** Needs camera.ui 2.5.2.
 
 ## 0.5.3
