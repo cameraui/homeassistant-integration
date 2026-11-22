@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import CameraUiConfigEntry
-from .entity import CameraUiRobotEntity, async_setup_sensor_platform
+from .entity import CameraUiCommandEntity, async_setup_sensor_platform
 
 PARALLEL_UPDATES = 1
 
@@ -23,7 +23,7 @@ async def async_setup_entry(
     async_setup_sensor_platform(hass, entry, async_add_entities, Platform.LAWN_MOWER, CameraUiLawnMower)
 
 
-class CameraUiLawnMower(CameraUiRobotEntity, LawnMowerEntity):
+class CameraUiLawnMower(CameraUiCommandEntity, LawnMowerEntity):
     @property
     def supported_features(self) -> LawnMowerEntityFeature:
         return self._command_features(COMMAND_FEATURES, LawnMowerEntityFeature(0))

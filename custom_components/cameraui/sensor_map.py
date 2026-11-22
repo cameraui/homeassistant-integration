@@ -24,6 +24,7 @@ DOMAIN_PLATFORM: dict[str, Platform] = {
     "waterHeater": Platform.WATER_HEATER,
     "vacuum": Platform.VACUUM,
     "lawnMower": Platform.LAWN_MOWER,
+    "mediaPlayer": Platform.MEDIA_PLAYER,
     "alarm": Platform.ALARM_CONTROL_PANEL,
     "event": Platform.EVENT,
     "text": Platform.TEXT,

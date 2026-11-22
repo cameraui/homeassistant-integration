@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -75,6 +76,7 @@ class CameraUiEntity(CoordinatorEntity[CameraUiCoordinator]):
 class CameraUiSensorEntity(Entity):
     _attr_has_entity_name = True
     _attr_should_poll = False
+    _block = ""
 
     def __init__(self, manager: CameraUiSensorManager, sensor: dict[str, Any]) -> None:
         self._manager = manager
@@ -217,6 +219,18 @@ class CameraUiSensorEntity(Entity):
         specs = (self._sensor or {}).get("propertySpecs") or {}
         return specs.get(property_name) or {}
 
+    @property
+    def _parts(self) -> dict[str, str]:
+        parts: dict[str, str] = self._semantics.get(self._block) or {}
+        return parts
+
+    def _read(self, part: str) -> Any:
+        property_name = self._parts.get(part)
+        return self._properties.get(property_name) if property_name else None
+
+    def _part_spec(self, part: str) -> dict[str, Any]:
+        return self._spec(self._parts.get(part, ""))
+
     async def async_command(self, property_name: str, value: Any) -> None:
         await self._manager.async_command(self._sensor_id, property_name, value)
 
@@ -235,7 +249,7 @@ class CameraUiOpenCloseEntity(CameraUiSensorEntity):
         return self._is("closing")
 
 
-class CameraUiRobotEntity(CameraUiSensorEntity):
+class CameraUiCommandEntity(CameraUiSensorEntity):
     @property
     def _commands(self) -> dict[str, str]:
         return self._semantics.get("commands") or {}
@@ -269,6 +283,15 @@ class CameraUiSensorSetting(CameraUiSensorEntity):
     @property
     def _value(self) -> Any:
         return self._properties.get(self._property)
+
+
+def choice_value(choices: list[dict[str, Any]], label: str, kind: str) -> Any:
+    # HA's services take any string here and do not check it against the offered list
+    value = next((choice["value"] for choice in choices if choice["label"] == label), None)
+    if value is None:
+        available = ", ".join(choice["label"] for choice in choices)
+        raise ServiceValidationError(f"Unknown {kind} {label}, available: {available}")
+    return value
 
 
 def async_setup_sensor_platform(

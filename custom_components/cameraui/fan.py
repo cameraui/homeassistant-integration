@@ -20,22 +20,16 @@ async def async_setup_entry(
 
 
 class CameraUiFan(CameraUiSensorEntity, FanEntity):
-    @property
-    def _fan(self) -> dict[str, str]:
-        return self._semantics.get("fan") or {}
-
-    def _read(self, key: str) -> Any:
-        property_name = self._fan.get(key)
-        return self._properties.get(property_name) if property_name else None
+    _block = "fan"
 
     @property
     def supported_features(self) -> FanEntityFeature:
         features = FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
-        if self._fan.get("speed"):
+        if self._parts.get("speed"):
             features |= FanEntityFeature.SET_SPEED
-        if self._fan.get("oscillating"):
+        if self._parts.get("oscillating"):
             features |= FanEntityFeature.OSCILLATE
-        if self._fan.get("direction"):
+        if self._parts.get("direction"):
             features |= FanEntityFeature.DIRECTION
         return features
 
@@ -49,7 +43,7 @@ class CameraUiFan(CameraUiSensorEntity, FanEntity):
 
     @property
     def speed_count(self) -> int:
-        step = self._spec(self._fan.get("speed", "")).get("step")
+        step = self._part_spec("speed").get("step")
         return round(100 / step) if step else 100
 
     @property
@@ -63,7 +57,7 @@ class CameraUiFan(CameraUiSensorEntity, FanEntity):
     async def async_turn_on(
         self, percentage: int | None = None, preset_mode: str | None = None, **kwargs: Any
     ) -> None:
-        if percentage and (speed := self._fan.get("speed")):
+        if percentage and (speed := self._parts.get("speed")):
             await self.async_command(speed, percentage)
         await self.async_command(self._semantics["commandProperty"], True)
 
@@ -74,12 +68,12 @@ class CameraUiFan(CameraUiSensorEntity, FanEntity):
         if percentage == 0:
             await self.async_turn_off()
         elif self.is_on:
-            await self.async_command(self._fan["speed"], percentage)
+            await self.async_command(self._parts["speed"], percentage)
         else:
             await self.async_turn_on(percentage)
 
     async def async_oscillate(self, oscillating: bool) -> None:
-        await self.async_command(self._fan["oscillating"], oscillating)
+        await self.async_command(self._parts["oscillating"], oscillating)
 
     async def async_set_direction(self, direction: str) -> None:
-        await self.async_command(self._fan["direction"], direction)
+        await self.async_command(self._parts["direction"], direction)

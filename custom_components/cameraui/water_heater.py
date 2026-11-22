@@ -25,18 +25,11 @@ async def async_setup_entry(
 
 class CameraUiWaterHeater(CameraUiSensorEntity, WaterHeaterEntity):
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-
-    @property
-    def _climate(self) -> dict[str, str]:
-        return self._semantics.get("climate") or {}
-
-    def _read(self, key: str) -> Any:
-        property_name = self._climate.get(key)
-        return self._properties.get(property_name) if property_name else None
+    _block = "climate"
 
     @property
     def _target_spec(self) -> dict[str, Any]:
-        return self._spec(self._climate.get("target", ""))
+        return self._part_spec("target")
 
     @property
     def _turn_on_mode(self) -> str | None:
@@ -83,10 +76,10 @@ class CameraUiWaterHeater(CameraUiSensorEntity, WaterHeaterEntity):
     async def async_set_temperature(self, **kwargs: Any) -> None:
         if ATTR_OPERATION_MODE in kwargs:
             await self.async_handle_set_operation_mode(kwargs[ATTR_OPERATION_MODE])
-        await self.async_command(self._climate["target"], kwargs[ATTR_TEMPERATURE])
+        await self.async_command(self._parts["target"], kwargs[ATTR_TEMPERATURE])
 
     async def async_set_operation_mode(self, operation_mode: str) -> None:
-        await self.async_command(self._climate["mode"], operation_mode)
+        await self.async_command(self._parts["mode"], operation_mode)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         if mode := self._turn_on_mode:

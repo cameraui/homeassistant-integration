@@ -11,6 +11,7 @@
 - **Humidifiers and dehumidifiers.** A humidifier or dehumidifier sets its target humidity and mode, and shows the humidity it measures and whether it is working when it reports them. Needs camera.ui 2.5.2.
 - **Air purifiers and water heaters.** An air purifier is a fan that sets its speed when it can, its presets are a select, its automatic mode and child lock are switches and its filter life a sensor. A water heater sets its target temperature and mode, its away mode is a switch. Needs camera.ui 2.5.2.
 - **Robot vacuums and lawn mowers.** A vacuum starts, pauses, stops, cleans a spot, returns to its dock, beeps so you can find it and sets its fan speed. A lawn mower starts, pauses and returns to its dock. Each offers only the commands the device has. Needs camera.ui 2.5.2.
+- **Media players.** A TV, speaker, receiver or projector turns on and off, plays, pauses, stops and skips, sets its volume, mutes and switches its input, and shows the title and artist of what plays. It offers only what the device has. Needs camera.ui 2.5.2.
 - **A jammed lock shows as jammed.** Needs camera.ui 2.5.2.
 
 ## 0.5.3

@@ -10,11 +10,10 @@ from homeassistant.components.humidifier import (
 )
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import CameraUiConfigEntry
-from .entity import CameraUiSensorEntity, async_setup_sensor_platform
+from .entity import CameraUiSensorEntity, async_setup_sensor_platform, choice_value
 
 PARALLEL_UPDATES = 1
 
@@ -26,25 +25,16 @@ async def async_setup_entry(
 
 
 class CameraUiHumidifier(CameraUiSensorEntity, HumidifierEntity):
-    @property
-    def _humidifier(self) -> dict[str, str]:
-        return self._semantics.get("humidifier") or {}
-
-    def _read(self, key: str) -> Any:
-        property_name = self._humidifier.get(key)
-        return self._properties.get(property_name) if property_name else None
-
-    def _humidifier_spec(self, key: str) -> dict[str, Any]:
-        return self._spec(self._humidifier.get(key, ""))
+    _block = "humidifier"
 
     @property
     def _modes(self) -> list[dict[str, Any]]:
-        choices: list[dict[str, Any]] = self._humidifier_spec("mode").get("choices", [])
+        choices: list[dict[str, Any]] = self._part_spec("mode").get("choices", [])
         return choices
 
     @property
     def supported_features(self) -> HumidifierEntityFeature:
-        if self._humidifier.get("mode"):
+        if self._parts.get("mode"):
             return HumidifierEntityFeature.MODES
         return HumidifierEntityFeature(0)
 
@@ -72,15 +62,15 @@ class CameraUiHumidifier(CameraUiSensorEntity, HumidifierEntity):
 
     @property
     def target_humidity_step(self) -> float | None:
-        return self._humidifier_spec("target").get("step")
+        return self._part_spec("target").get("step")
 
     @property
     def min_humidity(self) -> float:
-        return float(self._humidifier_spec("target").get("min", super().min_humidity))
+        return float(self._part_spec("target").get("min", super().min_humidity))
 
     @property
     def max_humidity(self) -> float:
-        return float(self._humidifier_spec("target").get("max", super().max_humidity))
+        return float(self._part_spec("target").get("max", super().max_humidity))
 
     @property
     def available_modes(self) -> list[str]:
@@ -98,11 +88,7 @@ class CameraUiHumidifier(CameraUiSensorEntity, HumidifierEntity):
         await self.async_command(self._semantics["commandProperty"], False)
 
     async def async_set_humidity(self, humidity: int) -> None:
-        await self.async_command(self._humidifier["target"], humidity)
+        await self.async_command(self._parts["target"], humidity)
 
     async def async_set_mode(self, mode: str) -> None:
-        # the set_mode service takes any string, HA does not check it against available_modes
-        value = next((choice["value"] for choice in self._modes if choice["label"] == mode), None)
-        if value is None:
-            raise ServiceValidationError(f"Unknown mode {mode}, available: {', '.join(self.available_modes)}")
-        await self.async_command(self._humidifier["mode"], value)
+        await self.async_command(self._parts["mode"], choice_value(self._modes, mode, "mode"))

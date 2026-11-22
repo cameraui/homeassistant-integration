@@ -19,6 +19,7 @@ from custom_components.cameraui import (
     lawn_mower,
     light,
     lock,
+    media_player,
     number,
     scene,
     select,
@@ -56,6 +57,7 @@ PLATFORMS: dict[str, ModuleType] = {
     "water_heater": water_heater,
     "vacuum": vacuum,
     "lawn_mower": lawn_mower,
+    "media_player": media_player,
 }
 
 # every SensorDomain of the SDK
@@ -76,6 +78,7 @@ SENSOR_DOMAINS = [
     "waterHeater",
     "vacuum",
     "lawnMower",
+    "mediaPlayer",
     "alarm",
     "event",
     "text",
@@ -1114,3 +1117,119 @@ async def test_a_lawn_mower_mows_pauses_and_docks_when_it_can(hass: HomeAssistan
         ("m-1", "command", "dock"),
         ("m-2", "command", "start"),
     ]
+
+
+MEDIA_PLAYER = {"domain": "mediaPlayer", "stateProperty": "state", "commandProperty": "command"}
+
+
+async def test_a_media_player_offers_the_controls_and_commands_it_has(hass: HomeAssistant) -> None:
+    tv = stored(
+        "p-1",
+        "mediaPlayer",
+        {
+            **MEDIA_PLAYER,
+            "deviceClass": "tv",
+            "commands": {name: name for name in ("play", "pause", "stop", "next", "previous")},
+            "mediaPlayer": {
+                "power": "on",
+                "volume": "volume",
+                "muted": "muted",
+                "source": "source",
+                "title": "title",
+                "artist": "artist",
+            },
+        },
+        properties={
+            "on": True,
+            "state": "playing",
+            "command": "",
+            "volume": 40,
+            "muted": False,
+            "source": "hdmi1",
+            "title": "So What",
+            "artist": "Miles Davis",
+        },
+        capabilities=["power", "volume", "mute", "source", "nowPlaying"],
+        propertySpecs={
+            "source": {
+                "type": "string",
+                "writable": True,
+                "choices": [{"value": "hdmi1", "label": "HDMI 1"}, {"value": "netflix", "label": "Netflix"}],
+            }
+        },
+    )
+    speaker = stored(
+        "p-2",
+        "mediaPlayer",
+        {**MEDIA_PLAYER, "commands": {"play": "play", "pause": "pause"}, "mediaPlayer": {"volume": "volume"}},
+        properties={"state": "idle", "command": "", "volume": 25},
+        capabilities=["volume"],
+    )
+    ha = await setup(hass, tv, speaker)
+
+    state = ha.state("media_player", "p-1")
+    assert state.state == "playing"
+    assert state.attributes["device_class"] == "tv"
+    assert state.attributes["volume_level"] == 0.4
+    assert state.attributes["is_volume_muted"] is False
+    assert state.attributes["source"] == "HDMI 1"
+    assert state.attributes["source_list"] == ["HDMI 1", "Netflix"]
+    assert state.attributes["media_title"] == "So What"
+    assert state.attributes["media_artist"] == "Miles Davis"
+    # play, pause, stop, next, previous, turn on, turn off, volume set, mute and select source
+    assert state.attributes["supported_features"] == 16384 | 1 | 4096 | 32 | 16 | 128 | 256 | 4 | 8 | 2048
+    assert not ha.has("select", "p-1_source")
+    assert not ha.has("number", "p-1_volume")
+
+    speaker_state = ha.state("media_player", "p-2")
+    assert speaker_state.state == "idle"
+    assert speaker_state.attributes["volume_level"] == 0.25
+    # play, pause and volume set
+    assert speaker_state.attributes["supported_features"] == 16384 | 1 | 4
+    for attribute in ("device_class", "is_volume_muted", "source", "source_list", "media_title"):
+        assert attribute not in speaker_state.attributes
+
+    for player_state in ("on", "idle", "paused", "buffering", "off"):
+        await ha.changed("p-1", "state", player_state)
+        assert ha.state("media_player", "p-1").state == player_state
+    await ha.changed("p-1", "command", "play")
+    assert ha.state("media_player", "p-1").state == "off"
+    await ha.changed("p-1", "state", None)
+    assert ha.state("media_player", "p-1").state == "unknown"
+    await ha.changed("p-1", "state", "playing")
+    await ha.changed("p-1", "volume", 0)
+    await ha.changed("p-1", "source", "netflix")
+    playing = ha.state("media_player", "p-1")
+    assert playing.attributes["volume_level"] == 0
+    assert playing.attributes["source"] == "Netflix"
+
+    entity = ha.entity("media_player", "p-1")
+    await entity.async_turn_on()
+    await entity.async_turn_off()
+    await entity.async_set_volume_level(0.55)
+    await entity.async_mute_volume(True)
+    await entity.async_select_source("HDMI 1")
+    await entity.async_media_play()
+    await entity.async_media_pause()
+    await entity.async_media_stop()
+    await entity.async_media_next_track()
+    await entity.async_media_previous_track()
+    await ha.entity("media_player", "p-2").async_volume_up()
+    await ha.entity("media_player", "p-2").async_media_pause()
+    assert ha.client.commands == [
+        ("p-1", "on", True),
+        ("p-1", "on", False),
+        ("p-1", "volume", 55),
+        ("p-1", "muted", True),
+        ("p-1", "source", "hdmi1"),
+        ("p-1", "command", "play"),
+        ("p-1", "command", "pause"),
+        ("p-1", "command", "stop"),
+        ("p-1", "command", "next"),
+        ("p-1", "command", "previous"),
+        ("p-2", "volume", 35),
+        ("p-2", "command", "pause"),
+    ]
+
+    with pytest.raises(ServiceValidationError):
+        await entity.async_select_source("Cable")

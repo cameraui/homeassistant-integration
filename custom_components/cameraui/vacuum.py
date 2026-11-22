@@ -5,11 +5,10 @@ from typing import Any
 from homeassistant.components.vacuum import StateVacuumEntity, VacuumActivity, VacuumEntityFeature
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import CameraUiConfigEntry
-from .entity import CameraUiRobotEntity, async_setup_sensor_platform
+from .entity import CameraUiCommandEntity, async_setup_sensor_platform, choice_value
 
 PARALLEL_UPDATES = 1
 
@@ -29,7 +28,7 @@ async def async_setup_entry(
     async_setup_sensor_platform(hass, entry, async_add_entities, Platform.VACUUM, CameraUiVacuum)
 
 
-class CameraUiVacuum(CameraUiRobotEntity, StateVacuumEntity):
+class CameraUiVacuum(CameraUiCommandEntity, StateVacuumEntity):
     @property
     def _fan_speed_property(self) -> str:
         return (self._semantics.get("fanSpeed") or {}).get("property", "")
@@ -78,10 +77,6 @@ class CameraUiVacuum(CameraUiRobotEntity, StateVacuumEntity):
         await self._send("spot")
 
     async def async_set_fan_speed(self, fan_speed: str, **kwargs: Any) -> None:
-        # the set_fan_speed service takes any string, HA does not check it against fan_speed_list
-        value = next((choice["value"] for choice in self._fan_speeds if choice["label"] == fan_speed), None)
-        if value is None:
-            raise ServiceValidationError(
-                f"Unknown fan speed {fan_speed}, available: {', '.join(self.fan_speed_list)}"
-            )
-        await self.async_command(self._fan_speed_property, value)
+        await self.async_command(
+            self._fan_speed_property, choice_value(self._fan_speeds, fan_speed, "fan speed")
+        )
