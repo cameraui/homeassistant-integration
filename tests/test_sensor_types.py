@@ -16,6 +16,7 @@ from custom_components.cameraui import (
     event,
     fan,
     humidifier,
+    lawn_mower,
     light,
     lock,
     number,
@@ -25,6 +26,7 @@ from custom_components.cameraui import (
     siren,
     switch,
     text,
+    vacuum,
     valve,
     water_heater,
 )
@@ -52,6 +54,8 @@ PLATFORMS: dict[str, ModuleType] = {
     "scene": scene,
     "humidifier": humidifier,
     "water_heater": water_heater,
+    "vacuum": vacuum,
+    "lawn_mower": lawn_mower,
 }
 
 # every SensorDomain of the SDK
@@ -70,6 +74,8 @@ SENSOR_DOMAINS = [
     "humidifier",
     "airPurifier",
     "waterHeater",
+    "vacuum",
+    "lawnMower",
     "alarm",
     "event",
     "text",
@@ -988,3 +994,123 @@ async def test_a_toggle_is_a_switch_while_the_sensor_offers_it(hass: HomeAssista
 
     await ha.push({"type": "meta", "sensorId": "w-1", "capabilities": [], "semantics": semantics})
     assert ha.state("switch", "w-1_away").state == "unavailable"
+
+
+VACUUM = {"domain": "vacuum", "stateProperty": "activity", "commandProperty": "command"}
+
+
+async def test_a_vacuum_offers_the_commands_and_fan_speeds_it_has(hass: HomeAssistant) -> None:
+    commands = {name: name for name in ("start", "pause", "stop", "dock", "locate", "spot")}
+    robot = stored(
+        "r-1",
+        "vacuum",
+        {**VACUUM, "commands": commands, "fanSpeed": {"property": "fanSpeed"}},
+        properties={"activity": "docked", "command": "", "fanSpeed": "quiet"},
+        capabilities=["fanSpeed"],
+        propertySpecs={
+            "fanSpeed": {
+                "type": "string",
+                "writable": True,
+                "choices": [{"value": "quiet", "label": "Quiet"}, {"value": "max", "label": "Max"}],
+            }
+        },
+    )
+    basic = stored(
+        "r-2",
+        "vacuum",
+        {**VACUUM, "commands": {"start": "start", "dock": "dock"}},
+        properties={"command": ""},
+    )
+    ha = await setup(hass, robot, basic)
+
+    state = ha.state("vacuum", "r-1")
+    assert state.state == "docked"
+    assert state.attributes["fan_speed"] == "Quiet"
+    assert state.attributes["fan_speed_list"] == ["Quiet", "Max"]
+    # state, start, pause, stop, return home, locate, clean spot and fan speed
+    assert state.attributes["supported_features"] == 4096 | 8192 | 4 | 8 | 16 | 512 | 1024 | 32
+    assert not ha.has("select", "r-1_fanSpeed")
+
+    basic_state = ha.state("vacuum", "r-2")
+    assert basic_state.state == "unknown"
+    # state, start and return home
+    assert basic_state.attributes["supported_features"] == 4096 | 8192 | 16
+    assert "fan_speed" not in basic_state.attributes
+    assert "fan_speed_list" not in basic_state.attributes
+
+    for activity in ("cleaning", "paused", "returning", "idle", "error"):
+        await ha.changed("r-1", "activity", activity)
+        assert ha.state("vacuum", "r-1").state == activity
+    await ha.changed("r-1", "command", "dock")
+    assert ha.state("vacuum", "r-1").state == "error"
+    await ha.changed("r-1", "activity", None)
+    assert ha.state("vacuum", "r-1").state == "unknown"
+    await ha.changed("r-1", "fanSpeed", "max")
+    assert ha.state("vacuum", "r-1").attributes["fan_speed"] == "Max"
+
+    entity = ha.entity("vacuum", "r-1")
+    await entity.async_start()
+    await entity.async_pause()
+    await entity.async_stop()
+    await entity.async_return_to_base()
+    await entity.async_locate()
+    await entity.async_clean_spot()
+    await entity.async_set_fan_speed("Quiet")
+    await ha.entity("vacuum", "r-2").async_return_to_base()
+    assert ha.client.commands == [
+        ("r-1", "command", "start"),
+        ("r-1", "command", "pause"),
+        ("r-1", "command", "stop"),
+        ("r-1", "command", "dock"),
+        ("r-1", "command", "locate"),
+        ("r-1", "command", "spot"),
+        ("r-1", "fanSpeed", "quiet"),
+        ("r-2", "command", "dock"),
+    ]
+
+    with pytest.raises(ServiceValidationError):
+        await entity.async_set_fan_speed("Turbo")
+
+
+LAWN_MOWER = {"domain": "lawnMower", "stateProperty": "activity", "commandProperty": "command"}
+
+
+async def test_a_lawn_mower_mows_pauses_and_docks_when_it_can(hass: HomeAssistant) -> None:
+    garden = stored(
+        "m-1",
+        "lawnMower",
+        {**LAWN_MOWER, "commands": {"start": "start", "pause": "pause", "dock": "dock"}},
+        properties={"activity": "mowing", "command": ""},
+    )
+    meadow = stored(
+        "m-2", "lawnMower", {**LAWN_MOWER, "commands": {"start": "start", "dock": "dock"}}, properties={}
+    )
+    ha = await setup(hass, garden, meadow)
+
+    state = ha.state("lawn_mower", "m-1")
+    assert state.state == "mowing"
+    # start mowing, pause and dock
+    assert state.attributes["supported_features"] == 1 | 2 | 4
+
+    meadow_state = ha.state("lawn_mower", "m-2")
+    assert meadow_state.state == "unknown"
+    # start mowing and dock
+    assert meadow_state.attributes["supported_features"] == 1 | 4
+
+    for activity in ("paused", "returning", "docked", "error"):
+        await ha.changed("m-1", "activity", activity)
+        assert ha.state("lawn_mower", "m-1").state == activity
+    await ha.changed("m-1", "command", "start")
+    assert ha.state("lawn_mower", "m-1").state == "error"
+
+    entity = ha.entity("lawn_mower", "m-1")
+    await entity.async_start_mowing()
+    await entity.async_pause()
+    await entity.async_dock()
+    await ha.entity("lawn_mower", "m-2").async_start_mowing()
+    assert ha.client.commands == [
+        ("m-1", "command", "start"),
+        ("m-1", "command", "pause"),
+        ("m-1", "command", "dock"),
+        ("m-2", "command", "start"),
+    ]

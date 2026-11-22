@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Sequence
+from enum import IntFlag
 from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
@@ -232,6 +233,21 @@ class CameraUiOpenCloseEntity(CameraUiSensorEntity):
     @property
     def is_closing(self) -> bool:
         return self._is("closing")
+
+
+class CameraUiRobotEntity(CameraUiSensorEntity):
+    @property
+    def _commands(self) -> dict[str, str]:
+        return self._semantics.get("commands") or {}
+
+    def _command_features[F: IntFlag](self, features: dict[str, F], base: F) -> F:
+        for command, feature in features.items():
+            if command in self._commands:
+                base |= feature
+        return base
+
+    async def _send(self, command: str) -> None:
+        await self.async_command(self._semantics["commandProperty"], self._commands[command])
 
 
 class CameraUiSensorSetting(CameraUiSensorEntity):
