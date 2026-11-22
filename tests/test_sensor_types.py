@@ -26,6 +26,7 @@ from custom_components.cameraui import (
     switch,
     text,
     valve,
+    water_heater,
 )
 from custom_components.cameraui.const import DOMAIN
 from custom_components.cameraui.coordinator import CameraUiCoordinator
@@ -50,6 +51,7 @@ PLATFORMS: dict[str, ModuleType] = {
     "valve": valve,
     "scene": scene,
     "humidifier": humidifier,
+    "water_heater": water_heater,
 }
 
 # every SensorDomain of the SDK
@@ -66,6 +68,8 @@ SENSOR_DOMAINS = [
     "valve",
     "scene",
     "humidifier",
+    "airPurifier",
+    "waterHeater",
     "alarm",
     "event",
     "text",
@@ -791,3 +795,196 @@ async def test_a_humidifier_offers_its_range_modes_and_readings(hass: HomeAssist
 
     with pytest.raises(ServiceValidationError):
         await entity.async_set_mode("Turbo")
+
+
+PURIFIER = {"domain": "airPurifier", "stateProperty": "on", "commandProperty": "on"}
+
+
+async def test_an_air_purifier_is_a_fan_with_its_presets_toggles_and_filter(hass: HomeAssistant) -> None:
+    bedroom = stored(
+        "p-1",
+        "airPurifier",
+        {
+            **PURIFIER,
+            "fan": {"speed": "speed"},
+            "choices": ["preset"],
+            "toggles": ["auto", "childLock"],
+            "readings": [{"property": "filterLife", "unit": "%"}],
+        },
+        properties={
+            "on": True,
+            "speed": 60,
+            "auto": False,
+            "childLock": True,
+            "preset": "sleep",
+            "filterLife": 35,
+        },
+        capabilities=["speed", "auto", "preset", "childLock", "filter"],
+        propertySpecs={
+            "speed": {"type": "number", "min": 0, "max": 100, "step": 1, "unit": "%", "writable": True},
+            "preset": {
+                "type": "string",
+                "writable": True,
+                "choices": [{"value": "sleep", "label": "Sleep"}, {"value": "turbo", "label": "Turbo"}],
+            },
+        },
+    )
+    hallway = stored("p-2", "airPurifier", {**PURIFIER, "readings": []}, properties={"on": False})
+    ha = await setup(hass, bedroom, hallway)
+
+    state = ha.state("fan", "p-1")
+    assert state.state == "on"
+    assert state.attributes["percentage"] == 60
+    assert state.attributes["percentage_step"] == 1
+    # set speed, turn off and turn on
+    assert state.attributes["supported_features"] == 1 | 16 | 32
+    assert ha.state("select", "p-1_preset").state == "Sleep"
+
+    filter_life = ha.state("sensor", "p-1_filterLife")
+    assert filter_life.state == "35"
+    assert filter_life.attributes["unit_of_measurement"] == "%"
+    assert filter_life.attributes["friendly_name"] == "Front Filter life"
+
+    assert ha.state("switch", "p-1_auto").state == "off"
+    child_lock = ha.state("switch", "p-1_childLock")
+    assert child_lock.state == "on"
+    assert child_lock.attributes["friendly_name"] == "Front Child lock"
+
+    hallway_state = ha.state("fan", "p-2")
+    assert hallway_state.state == "off"
+    assert hallway_state.attributes["supported_features"] == 16 | 32
+    assert "percentage" not in hallway_state.attributes
+    for domain, unique_id in (("switch", "p-2_auto"), ("select", "p-2_preset"), ("sensor", "p-2_filterLife")):
+        assert not ha.has(domain, unique_id)
+
+    await ha.entity("fan", "p-1").async_set_percentage(40)
+    await ha.entity("select", "p-1_preset").async_select_option("Turbo")
+    await ha.entity("switch", "p-1_auto").async_turn_on()
+    await ha.entity("switch", "p-1_childLock").async_turn_off()
+    await ha.entity("fan", "p-2").async_turn_on()
+    assert ha.client.commands == [
+        ("p-1", "speed", 40),
+        ("p-1", "preset", "turbo"),
+        ("p-1", "auto", True),
+        ("p-1", "childLock", False),
+        ("p-2", "on", True),
+    ]
+
+    await ha.changed("p-1", "childLock", False)
+    assert ha.state("switch", "p-1_childLock").state == "off"
+
+
+WATER_HEATER = {
+    "domain": "waterHeater",
+    "stateProperty": "mode",
+    "commandProperty": "mode",
+    "climate": {"current": "currentTemperature", "target": "targetTemperature", "mode": "mode"},
+}
+
+
+async def test_a_water_heater_offers_its_modes_and_range(hass: HomeAssistant) -> None:
+    boiler = stored(
+        "w-1",
+        "waterHeater",
+        {**WATER_HEATER, "states": {"off": "off", "eco": "eco", "heat_pump": "heat_pump"}},
+        properties={"mode": "eco", "currentTemperature": 48.5, "targetTemperature": 55},
+        propertySpecs={
+            "targetTemperature": {
+                "type": "number",
+                "min": 40,
+                "max": 65,
+                "step": 1,
+                "unit": "°C",
+                "writable": True,
+            },
+            "mode": {
+                "type": "enum",
+                "writable": True,
+                "values": {"off": "off", "eco": "eco", "heat_pump": "heat_pump"},
+            },
+        },
+    )
+    tank = stored(
+        "w-2",
+        "waterHeater",
+        {**WATER_HEATER, "states": {"off": "off", "electric": "electric"}},
+        properties={"mode": "off", "targetTemperature": 50},
+    )
+    ha = await setup(hass, boiler, tank)
+
+    state = ha.state("water_heater", "w-1")
+    assert state.state == "eco"
+    assert state.attributes["operation_list"] == ["off", "eco", "heat_pump"]
+    assert state.attributes["operation_mode"] == "eco"
+    assert state.attributes["current_temperature"] == 48.5
+    assert state.attributes["temperature"] == 55
+    assert state.attributes["min_temp"] == 40
+    assert state.attributes["max_temp"] == 65
+    assert state.attributes["target_temp_step"] == 1
+    # target temperature and operation mode, turning on has no single mode to go to
+    assert state.attributes["supported_features"] == 1 | 2
+    assert "away_mode" not in state.attributes
+
+    tank_state = ha.state("water_heater", "w-2")
+    assert tank_state.state == "off"
+    # target temperature, operation mode and on/off
+    assert tank_state.attributes["supported_features"] == 1 | 2 | 8
+    assert tank_state.attributes["min_temp"] == 43.3
+    assert tank_state.attributes["max_temp"] == 60
+    assert tank_state.attributes["current_temperature"] is None
+    assert "target_temp_step" not in tank_state.attributes
+
+    await ha.changed("w-1", "mode", "heat_pump")
+    assert ha.state("water_heater", "w-1").state == "heat_pump"
+
+    entity = ha.entity("water_heater", "w-1")
+    await entity.async_set_temperature(temperature=60, operation_mode="off")
+    await entity.async_handle_set_operation_mode("eco")
+    await ha.entity("water_heater", "w-2").async_turn_on()
+    await ha.entity("water_heater", "w-2").async_turn_off()
+    assert ha.client.commands == [
+        ("w-1", "mode", "off"),
+        ("w-1", "targetTemperature", 60),
+        ("w-1", "mode", "eco"),
+        ("w-2", "mode", "electric"),
+        ("w-2", "mode", "off"),
+    ]
+
+    with pytest.raises(ServiceValidationError):
+        await entity.async_handle_set_operation_mode("gas")
+
+
+async def test_a_toggle_is_a_switch_while_the_sensor_offers_it(hass: HomeAssistant) -> None:
+    ha = await setup(
+        hass,
+        stored(
+            "w-1",
+            "waterHeater",
+            {**WATER_HEATER, "states": {"off": "off", "eco": "eco"}},
+            properties={"mode": "eco", "targetTemperature": 50, "away": False},
+        ),
+    )
+    assert not ha.has("switch", "w-1_away")
+
+    semantics = {**WATER_HEATER, "states": {"off": "off", "eco": "eco"}}
+    await ha.push(
+        {
+            "type": "meta",
+            "sensorId": "w-1",
+            "capabilities": ["away"],
+            "semantics": {**semantics, "toggles": ["away"]},
+        }
+    )
+    away = ha.state("switch", "w-1_away")
+    assert away.state == "off"
+    assert away.attributes["friendly_name"] == "Front Away"
+
+    await ha.entity("switch", "w-1_away").async_turn_on()
+    await ha.changed("w-1", "away", True)
+    assert ha.state("switch", "w-1_away").state == "on"
+
+    await ha.entity("switch", "w-1_away").async_turn_off()
+    assert ha.client.commands == [("w-1", "away", True), ("w-1", "away", False)]
+
+    await ha.push({"type": "meta", "sensorId": "w-1", "capabilities": [], "semantics": semantics})
+    assert ha.state("switch", "w-1_away").state == "unavailable"

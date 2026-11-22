@@ -116,7 +116,7 @@ class CameraUiReading(CameraUiSensorSetting, SensorEntity):
     @property
     def name(self) -> str | None:
         # HA names a reading after its device class, like MQTT discovery does
-        return self._device_class_name
+        return self._device_class_name if self.device_class else super().name
 
     @property
     def available(self) -> bool:

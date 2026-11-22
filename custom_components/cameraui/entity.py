@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Sequence
 from functools import partial
 from typing import TYPE_CHECKING, Any, cast
@@ -242,7 +243,7 @@ class CameraUiSensorSetting(CameraUiSensorEntity):
     @property
     def name(self) -> str | None:
         base = super().name
-        label = self._property.capitalize()
+        label = re.sub(r"(?<!^)(?=[A-Z])", " ", self._property).capitalize()
         return f"{base} {label}" if base else label
 
     @property
