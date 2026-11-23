@@ -5,6 +5,7 @@ from typing import Any
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry, MockEntityPlatform
@@ -110,6 +111,19 @@ async def test_a_sensor_without_a_device_is_its_own_device(hass: HomeAssistant) 
     assert device and device.identifiers == {(DOMAIN, "sensor_s-door")}
     assert device.name == "Front door"
     assert s.friendly_name("s-door") == "Front door"
+
+
+async def test_a_sensor_suggests_its_room_as_area_but_not_default(hass: HomeAssistant) -> None:
+    s = await setup(
+        hass, sensor("s-door", "Front door", room="Hallway"), sensor("s-window", "Window", room="Default")
+    )
+
+    door = s.entity_device("s-door")
+    window = s.entity_device("s-window")
+    assert door and door.area_id
+    area = ar.async_get(hass).async_get_area(door.area_id)
+    assert area and area.name == "Hallway"
+    assert window and window.area_id is None
 
 
 async def test_sensors_of_a_device_share_one_ha_device(hass: HomeAssistant) -> None:

@@ -37,6 +37,11 @@ if TYPE_CHECKING:
 DEVICE_FIELDS = ("name", "manufacturer", "model", "sw_version", "serial_number")
 
 
+def suggested_area(room: str | None) -> str | None:
+    # Default collects whatever has no room of its own, it is no place in the home
+    return room if room and room != "Default" else None
+
+
 class CameraUiEntity(CoordinatorEntity[CameraUiCoordinator]):
     _attr_has_entity_name = True
 
@@ -49,6 +54,7 @@ class CameraUiEntity(CoordinatorEntity[CameraUiCoordinator]):
             name=self.camera_data.get("name", camera_id),
             manufacturer="camera.ui",
             configuration_url=coordinator.client.base_url,
+            suggested_area=suggested_area(self.camera_data.get("room")),
         )
 
     @property
@@ -160,12 +166,14 @@ class CameraUiSensorEntity(Entity):
                 model=device.get("model") or sensor.get("pluginName"),
                 sw_version=device.get("firmware"),
                 serial_number=device.get("serialNumber"),
+                suggested_area=suggested_area(sensor.get("room")),
             )
         info = DeviceInfo(
             identifiers={(DOMAIN, f"sensor_{self._sensor_id}")},
             name=sensor.get("displayName") or sensor.get("name"),
             manufacturer="camera.ui",
             model=sensor.get("pluginName"),
+            suggested_area=suggested_area(sensor.get("room")),
         )
         # linked below the camera when there is exactly one
         assigned = sensor.get("assignedCameraIds", [])

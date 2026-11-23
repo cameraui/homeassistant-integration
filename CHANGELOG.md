@@ -2,6 +2,7 @@
 
 ## 0.5.4
 
+- **Cameras and sensors go into the area of their room.** A device without an area goes into the Home Assistant area named like its room in camera.ui. Sensor rooms need camera.ui 2.5.2.
 - **Sensors of one device show up as one device in Home Assistant.** A multi-sensor with contact, temperature and leak becomes one device with its manufacturer, model and firmware, and its entities are named after their part of the device. Entities keep their history. Needs camera.ui 2.5.2.
 - **Alarm panels offer only the modes the alarm system has.** A system without night mode, say, shows no night button. Needs camera.ui 2.5.2.
 - **Buttons, access readers, chimes, displays and air quality.** Button presses and access attempts arrive as event entities, a display as a text entity with its presets as a select, a chime as a siren with its tone as a select. The volume of a siren or chime is a number entity, and each air quality reading a sensor of its own. Volume, tone and display presets sit under Configuration on the device page. Needs camera.ui 2.5.2.
