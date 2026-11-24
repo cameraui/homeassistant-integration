@@ -6,9 +6,9 @@ from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 
 from . import CameraUiConfigEntry
-from .const import CONF_PROXY_SECRET, CONF_TOKEN
+from .const import CONF_TOKEN
 
-TO_REDACT = {CONF_TOKEN, CONF_PROXY_SECRET, "token", "password", "secret", "source", "sources", "url"}
+TO_REDACT = {CONF_TOKEN, "token", "password", "secret", "source", "sources", "url"}
 
 
 async def async_get_config_entry_diagnostics(

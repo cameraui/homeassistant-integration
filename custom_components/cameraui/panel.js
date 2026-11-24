@@ -1,3 +1,7 @@
+const SESSION_RENEW_MS = 60 * 1000;
+const SESSION_TTL_MS = 15 * 60 * 1000; // PANEL_SESSION_TTL in panel_session.py
+const SESSION_RETRY_MS = 10 * 1000;
+
 class CameraUiPanel extends HTMLElement {
   connectedCallback() {
     const parent = this.parentElement;
@@ -18,6 +22,15 @@ class CameraUiPanel extends HTMLElement {
       this._onResize = () => this._postSafeArea();
     }
     window.addEventListener('resize', this._onResize);
+    if (!this._onVisible) {
+      this._onVisible = () => {
+        if (document.visibilityState === 'visible') this._renewSession();
+      };
+    }
+    document.addEventListener('visibilitychange', this._onVisible);
+    clearInterval(this._renewTimer);
+    this._renewTimer = setInterval(() => this._openSession(), SESSION_RENEW_MS);
+    this._renewSession();
 
     if (this._built) return;
     this._built = true;
@@ -64,6 +77,8 @@ class CameraUiPanel extends HTMLElement {
   disconnectedCallback() {
     if (this._onMessage) window.removeEventListener('message', this._onMessage);
     if (this._onResize) window.removeEventListener('resize', this._onResize);
+    if (this._onVisible) document.removeEventListener('visibilitychange', this._onVisible);
+    clearInterval(this._renewTimer);
     this._unsubscribeBadges();
   }
 
@@ -73,7 +88,10 @@ class CameraUiPanel extends HTMLElement {
   }
 
   set hass(hass) {
+    // a restarted Home Assistant forgot the panel's session
+    const reconnected = hass.connected && this._hass && !this._hass.connected;
     this._hass = hass;
+    if (reconnected) this._openSession();
     this._sync();
   }
 
@@ -138,6 +156,11 @@ class CameraUiPanel extends HTMLElement {
     const mode = this._hass ? this._mode() : null;
     if (mode) this._applyBg(mode);
     if (!this._iframe.getAttribute('src')) {
+      // the proxy answers only with a session cookie, the iframe loads once it is set
+      if (!this._sessionAt) {
+        this._openSession();
+        return;
+      }
       const base = (this._panel.config && this._panel.config.proxyUrl) || '/';
       // the route may carry its own query (startTs deep links), merge instead of appending a second '?'
       const url = new URL(`${base}${this._appPath()}`, window.location.origin);
@@ -150,6 +173,33 @@ class CameraUiPanel extends HTMLElement {
       this._postedPath = this._routePath || '';
       this._iframe.setAttribute('src', `${url.pathname}${url.search}`);
     }
+  }
+
+  _renewSession() {
+    if (this._sessionAt && Date.now() - this._sessionAt >= SESSION_RENEW_MS)
+      this._openSession();
+  }
+
+  _openSession() {
+    const path = this._panel && this._panel.config && this._panel.config.sessionPath;
+    if (!this._hass || !path || this._sessionPending) return;
+    if (this._sessionFailedAt && Date.now() - this._sessionFailedAt < SESSION_RETRY_MS) return;
+    this._sessionPending = this._hass
+      .callApi('POST', path)
+      .then(() => {
+        // after a sleep longer than the session the app's requests were turned away, a reload starts it clean
+        const lapsed = this._sessionAt && Date.now() - this._sessionAt > SESSION_TTL_MS;
+        this._sessionAt = Date.now();
+        this._sessionFailedAt = null;
+        if (lapsed && this._loaded) this._iframe.contentWindow.location.reload();
+        this._apply();
+      })
+      .catch(() => {
+        this._sessionFailedAt = Date.now();
+      })
+      .finally(() => {
+        this._sessionPending = null;
+      });
   }
 
   _sync() {

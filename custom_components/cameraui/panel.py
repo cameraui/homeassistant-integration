@@ -11,6 +11,8 @@ from homeassistant.components.frontend import (
 )
 from homeassistant.components.http import StaticPathConfig
 
+from .panel_session import panel_proxy_base
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
@@ -46,7 +48,7 @@ def _panel_url_path(entry_id: str) -> str:
     return f"cameraui-{entry_id}"
 
 
-def async_register_panel(hass: HomeAssistant, entry: ConfigEntry, secret: str) -> None:
+def async_register_panel(hass: HomeAssistant, entry: ConfigEntry) -> None:
     async_register_built_in_panel(
         hass,
         "custom",
@@ -61,7 +63,8 @@ def async_register_panel(hass: HomeAssistant, entry: ConfigEntry, secret: str) -
                 "handle_safe_area": True,
                 "module_url": PANEL_JS_VERSIONED,
             },
-            "proxyUrl": f"/api/cameraui/proxy/{secret}/",
+            "proxyUrl": panel_proxy_base(entry.entry_id),
+            "sessionPath": f"cameraui/session/{entry.entry_id}",
         },
         require_admin=True,
     )

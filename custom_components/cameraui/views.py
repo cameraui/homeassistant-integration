@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import gzip
-import hmac
 import logging
 import re
 import threading
@@ -26,11 +25,11 @@ from .const import (
     CARD_ACCESS_ADMINS,
     CARD_ACCESS_ALL,
     CONF_CARD_ACCESS,
-    CONF_PROXY_SECRET,
     CONF_TOKEN,
     CONF_VIEWER_TOKEN,
     DOMAIN,
 )
+from .panel_session import PANEL_COOKIE, PANEL_SESSION_TTL, panel_proxy_base
 from .rpc import CameraUiRpcError
 
 if TYPE_CHECKING:
@@ -69,26 +68,53 @@ HOP_BY_HOP = {
 }
 # proxied bodies stay encoded, so their Content-Encoding goes along
 RESPONSE_HOP_BY_HOP = HOP_BY_HOP - {hdrs.CONTENT_ENCODING}
-PROXY_PREFIX = "/api/cameraui/proxy"
 VIDEO_RELAY_PATH = "api/go2rtc"
 
 
-class CameraUiProxyView(HomeAssistantView):
-    name = "api:cameraui:proxy"
-    url = "/api/cameraui/proxy/{secret}/{path:.*}"
-    requires_auth = False
+class CameraUiPanelSessionView(HomeAssistantView):
+    name = "api:cameraui:session"
+    url = "/api/cameraui/session/{entry_id}"
+    requires_auth = True
 
-    async def _handle(self, request: web.Request, secret: str, path: str) -> web.StreamResponse:
-        hass = request.app[KEY_HASS]
-
-        entry = _get_entry_by_proxy_secret(hass, secret)
+    async def post(self, request: web.Request, entry_id: str) -> web.Response:
+        if not request[KEY_HASS_USER].is_admin:
+            raise web.HTTPForbidden
+        entry = _get_loaded_entry(request.app[KEY_HASS], entry_id)
         if not entry:
             raise web.HTTPNotFound
 
+        response = web.Response(status=204, headers={hdrs.CACHE_CONTROL: "no-store"})
+        response.set_cookie(
+            PANEL_COOKIE,
+            entry.runtime_data.panel_sessions.create(),
+            path=panel_proxy_base(entry_id),
+            max_age=PANEL_SESSION_TTL,
+            secure=request.secure,
+            httponly=True,
+            samesite="Strict",
+        )
+        return response
+
+
+class CameraUiProxyView(HomeAssistantView):
+    # the panel's iframe can't send a Bearer header, its session cookie stands in for the HA login
+    name = "api:cameraui:proxy"
+    url = "/api/cameraui/proxy/{entry_id}/{path:.*}"
+    requires_auth = False
+
+    async def _handle(self, request: web.Request, entry_id: str, path: str) -> web.StreamResponse:
+        entry = _get_loaded_entry(request.app[KEY_HASS], entry_id)
+        if not entry:
+            raise web.HTTPNotFound
+        # 403, HA's ban counts every 401 as a failed login
+        if not entry.runtime_data.panel_sessions.valid(request.cookies.get(PANEL_COOKIE)):
+            raise web.HTTPForbidden
+
+        token = entry.data[CONF_TOKEN]
         if _is_websocket(request):
-            return await _proxy_ws(request, entry, path, entry.data[CONF_TOKEN])
+            return await _proxy_ws(request, entry, path, token)
         return await _proxy_http(
-            request, entry, _raw_proxy_path(request), entry.data[CONF_TOKEN], base=f"{PROXY_PREFIX}/{secret}/"
+            request, entry, _raw_proxy_path(request), token, base=panel_proxy_base(entry_id)
         )
 
     get = _handle
@@ -100,7 +126,7 @@ class CameraUiProxyView(HomeAssistantView):
 
 
 class CameraUiAuthProxyView(HomeAssistantView):
-    # same forwarder as the secret proxy, but the caller authenticates as an HA user: Bearer header
+    # same forwarder as the panel proxy, but the caller authenticates as an HA user: Bearer header
     # for HTTP, a signed path for WebSockets. Serves the dashboard cards, not the embedded SPA.
     name = "api:cameraui:auth"
     url = "/api/cameraui/auth/{entry_id}/{path:.*}"
@@ -476,7 +502,14 @@ async def _proxy_http(
         encoded=True,
     ).with_query(query)
 
-    headers = {name: value for name, value in request.headers.items() if name not in HOP_BY_HOP}
+    headers = {
+        name: value
+        for name, value in request.headers.items()
+        if name not in HOP_BY_HOP and name.lower() != hdrs.COOKIE.lower()
+    }
+    cookies = _without_panel_cookie(request.headers.getall(hdrs.COOKIE, []))
+    if cookies:
+        headers[hdrs.COOKIE] = cookies
     headers[hdrs.AUTHORIZATION] = f"Bearer {token}"
     if base:
         headers["X-Cui-Base"] = base
@@ -626,14 +659,9 @@ def _get_loaded_entry(hass: HomeAssistant, entry_id: str) -> ConfigEntry | None:
     return entry
 
 
-def _get_entry_by_proxy_secret(hass: HomeAssistant, secret: str) -> ConfigEntry | None:
-    for entry in hass.config_entries.async_entries(DOMAIN):
-        if entry.state is not ConfigEntryState.LOADED:
-            continue
-        stored = entry.data.get(CONF_PROXY_SECRET)
-        if stored and hmac.compare_digest(stored, secret):
-            return entry
-    return None
+def _without_panel_cookie(headers: list[str]) -> str:
+    cookies = [part.strip() for header in headers for part in header.split(";")]
+    return "; ".join(cookie for cookie in cookies if cookie and cookie.split("=", 1)[0] != PANEL_COOKIE)
 
 
 async def _websocket_forward(
