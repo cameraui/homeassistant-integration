@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import logging
-import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from awesomeversion import AwesomeVersion
 from homeassistant.config_entries import ConfigEntry
@@ -26,6 +25,7 @@ from .const import (
 from .coordinator import CameraUiCoordinator
 from .devices import async_remove_empty_sensor_devices
 from .panel import async_register_panel, async_register_panel_static, async_unregister_panel
+from .panel_session import PanelSessions
 from .ptz import async_setup_ptz_service
 from .resources import async_register_cards_bundle, async_unregister_cards_bundle
 from .rpc import CameraUiRpc
@@ -37,6 +37,7 @@ from .views import (
     CameraUiCardsFontView,
     CameraUiMediaView,
     CameraUiNotifyAssetView,
+    CameraUiPanelSessionView,
     CameraUiProxyView,
 )
 
@@ -53,6 +54,7 @@ class CameraUiRuntimeData:
     sensor_manager: CameraUiSensorManager
     rpc: CameraUiRpc
     clips: ClipCache
+    panel_sessions: PanelSessions = field(default_factory=PanelSessions)
 
 
 type CameraUiConfigEntry = ConfigEntry[CameraUiRuntimeData]
@@ -61,6 +63,7 @@ type CameraUiConfigEntry = ConfigEntry[CameraUiRuntimeData]
 async def async_setup_entry(hass: HomeAssistant, entry: CameraUiConfigEntry) -> bool:
     if not hass.data.get(DATA_GLOBAL_SETUP):
         hass.data[DATA_GLOBAL_SETUP] = True
+        hass.http.register_view(CameraUiPanelSessionView)
         hass.http.register_view(CameraUiProxyView)
         hass.http.register_view(CameraUiAuthProxyView)
         hass.http.register_view(CameraUiCardsAssetView)
@@ -116,11 +119,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: CameraUiConfigEntry) -> 
         await client.disconnect_events()
         raise
 
-    secret = entry.data.get(CONF_PROXY_SECRET)
-    if not secret:
-        secret = secrets.token_urlsafe(24)
-        hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_PROXY_SECRET: secret})
-    async_register_panel(hass, entry, secret)
+    async_register_panel(hass, entry)
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: CameraUiConfigEntry) -> bool:
+    if entry.version > 1:
+        return False
+    if entry.minor_version < 2:
+        data = {key: value for key, value in entry.data.items() if key != CONF_PROXY_SECRET}
+        hass.config_entries.async_update_entry(entry, data=data, minor_version=2)
     return True
 
 
@@ -155,6 +163,7 @@ async def _async_options_updated(hass: HomeAssistant, entry: CameraUiConfigEntry
 
 async def async_unload_entry(hass: HomeAssistant, entry: CameraUiConfigEntry) -> bool:
     async_unregister_panel(hass, entry)
+    entry.runtime_data.panel_sessions.clear()
     await entry.runtime_data.coordinator.client.disconnect_events()
     await entry.runtime_data.rpc.close()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

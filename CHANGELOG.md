@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.4
+## 0.5.5
 
 - **Cameras and sensors go into the area of their room.** A device without an area goes into the Home Assistant area named like its room in camera.ui. Sensor rooms need camera.ui 2.5.2.
 - **Sensors of one device show up as one device in Home Assistant.** A multi-sensor with contact, temperature and leak becomes one device with its manufacturer, model and firmware, and its entities are named after their part of the device. Entities keep their history. Needs camera.ui 2.5.2.
@@ -14,6 +14,10 @@
 - **Robot vacuums and lawn mowers.** A vacuum starts, pauses, stops, cleans a spot, returns to its dock, beeps so you can find it and sets its fan speed. A lawn mower starts, pauses and returns to its dock. Each offers only the commands the device has. Needs camera.ui 2.5.2.
 - **Media players.** A TV, speaker, receiver or projector turns on and off, plays, pauses, stops and skips, sets its volume or turns it up and down, mutes and switches its input, and shows the title and artist of what plays. It offers only what the device has. Needs camera.ui 2.5.2.
 - **A lock shows when it is locking, unlocking or jammed.** A lock that can't tell its state shows as unknown instead of unlocked. Jammed needs camera.ui 2.5.2.
+
+## 0.5.4
+
+- **Security fix for the camera.ui panel in the sidebar.**
 
 ## 0.5.3
 

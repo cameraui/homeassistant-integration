@@ -51,6 +51,7 @@ STEP_TOKEN_SCHEMA = vol.Schema({vol.Required(CONF_TOKEN): str})
 
 class CameraUiConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
+    MINOR_VERSION = 2
 
     def __init__(self) -> None:
         self._host: str | None = None

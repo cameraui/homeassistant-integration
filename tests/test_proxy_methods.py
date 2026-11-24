@@ -15,11 +15,10 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from yarl import URL
 
 from custom_components.cameraui import views
-from custom_components.cameraui.const import CONF_PROXY_SECRET, CONF_TOKEN, DOMAIN
+from custom_components.cameraui.const import CONF_TOKEN, DOMAIN
+from custom_components.cameraui.panel_session import PANEL_COOKIE, PanelSessions
 
 from .helpers import TOKEN, serve
-
-SECRET = "proxy-secret"
 
 
 @web.middleware
@@ -32,7 +31,7 @@ async def as_admin(request: web.Request, handler: Handler) -> web.StreamResponse
 @pytest.mark.parametrize(
     ("view", "prefix"),
     [
-        (views.CameraUiProxyView, f"/api/cameraui/proxy/{SECRET}"),
+        (views.CameraUiProxyView, "/api/cameraui/proxy/{entry_id}"),
         (views.CameraUiAuthProxyView, "/api/cameraui/auth/{entry_id}"),
     ],
 )
@@ -56,10 +55,12 @@ async def test_download_check_reaches_the_server(
 
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data={CONF_HOST: "127.0.0.1", CONF_PORT: up_port, CONF_TOKEN: TOKEN, CONF_PROXY_SECRET: SECRET},
+        data={CONF_HOST: "127.0.0.1", CONF_PORT: up_port, CONF_TOKEN: TOKEN},
     )
     entry.add_to_hass(hass)
     entry.mock_state(hass, ConfigEntryState.LOADED)
+    entry.runtime_data = SimpleNamespace(panel_sessions=PanelSessions())
+    cookie = {hdrs.COOKIE: f"{PANEL_COOKIE}={entry.runtime_data.panel_sessions.create()}"}
 
     upstream_session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False))
     monkeypatch.setattr(views, "async_get_clientsession", lambda hass, verify_ssl=True: upstream_session)
@@ -71,7 +72,7 @@ async def test_download_check_reaches_the_server(
 
     url = f"http://127.0.0.1:{port}{prefix.format(entry_id=entry.entry_id)}/api/download/clip-token"
     try:
-        async with aiohttp.ClientSession() as browser, browser.head(url) as res:
+        async with aiohttp.ClientSession() as browser, browser.head(url, headers=cookie) as res:
             assert res.status == 200
             assert res.headers[hdrs.CONTENT_TYPE] == "video/mp4"
     finally:
@@ -85,7 +86,7 @@ async def test_download_check_reaches_the_server(
 @pytest.mark.parametrize(
     ("view", "prefix"),
     [
-        (views.CameraUiProxyView, f"/api/cameraui/proxy/{SECRET}"),
+        (views.CameraUiProxyView, "/api/cameraui/proxy/{entry_id}"),
         (views.CameraUiAuthProxyView, "/api/cameraui/auth/{entry_id}"),
     ],
 )
@@ -109,10 +110,12 @@ async def test_encoded_camera_name_reaches_the_server(
 
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data={CONF_HOST: "127.0.0.1", CONF_PORT: up_port, CONF_TOKEN: TOKEN, CONF_PROXY_SECRET: SECRET},
+        data={CONF_HOST: "127.0.0.1", CONF_PORT: up_port, CONF_TOKEN: TOKEN},
     )
     entry.add_to_hass(hass)
     entry.mock_state(hass, ConfigEntryState.LOADED)
+    entry.runtime_data = SimpleNamespace(panel_sessions=PanelSessions())
+    cookie = {hdrs.COOKIE: f"{PANEL_COOKIE}={entry.runtime_data.panel_sessions.create()}"}
 
     upstream_session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False))
     monkeypatch.setattr(views, "async_get_clientsession", lambda hass, verify_ssl=True: upstream_session)
@@ -126,7 +129,7 @@ async def test_encoded_camera_name_reaches_the_server(
     try:
         async with (
             aiohttp.ClientSession() as browser,
-            browser.get(URL(f"http://127.0.0.1:{port}{path}", encoded=True)) as res,
+            browser.get(URL(f"http://127.0.0.1:{port}{path}", encoded=True), headers=cookie) as res,
         ):
             assert res.status == 200
     finally:
